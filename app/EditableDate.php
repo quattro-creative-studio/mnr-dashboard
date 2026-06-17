@@ -22,7 +22,7 @@ use Illuminate\Support\Collection;
  */
 class EditableDate extends Model {
 
-    protected $fillable = ['key', 'label', 'description', 'value'];
+    protected $fillable = ['key', 'label', 'description', 'value', 'sort_order'];
 
     protected $primaryKey = 'key';
 
@@ -52,6 +52,7 @@ class EditableDate extends Model {
     const FINAL_INVITATION_PARTY_REMINDER = "FINAL_INVITATION_PARTY_REMINDER";
     const FINAL_INVITATION_PARTY_REMINDER_SECOND = "FINAL_INVITATION_PARTY_REMINDER_SECOND";
     const FINAL_INVITATION_PARTY_J_2 = "FINAL_INVITATION_PARTY_J_2";
+    const END_YEAR_COMMUNICATION_EMAIL = "END_YEAR_COMMUNICATION_EMAIL";
 
     /**
      * Finds a date value by a key. Keys are constants defined in this class.

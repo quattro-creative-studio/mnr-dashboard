@@ -25,7 +25,7 @@ use Illuminate\Support\Str;
  */
 class EditableEmail extends Model {
 
-    protected $fillable = ['key', 'title', 'text', 'subject'];
+    protected $fillable = ['key', 'title', 'text', 'subject', 'sort_order'];
 
     protected $appends = ['dates_string'];
 
@@ -61,6 +61,7 @@ class EditableEmail extends Model {
 
     public static $MAIL_PARTY_GROUP_REMINDER = ["party_group_reminder", "Rappel inscription des groupes à la fête"];
 
+    public static $MAIL_END_YEAR_COMMUNICATION = ["end_year_communication_email", "Message de fin d'année"];
 
     public static $MAIL_FINAL = ["final", "Mail final"];
     public static $MAIL_FINAL_CERTIFICAT = ["final_certificat", "Mail final avec certificat"];

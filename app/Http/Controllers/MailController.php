@@ -42,6 +42,9 @@ class MailController extends Controller
         // Send party invitation reminder mail to classes eligible to
         // participate to the party that haven't registered yet
         $this->sendPartyInviteJ2();
+
+        // Send end of the year email extra communication to all teachers
+        $this->sendEndYearCommunicationEmail();
     }
 
     public function sendFinalMail()
@@ -186,6 +189,28 @@ class MailController extends Controller
         }
 
         Log::info('Sending ' . EditableEmail::$MAIL_NEW_EDUCATIONAL_TOOL[0]);
+
+        $teachers = Teacher::all();
+        foreach ($teachers as $teacher) {
+            if($mail->isSentToUser($teacher->user)) {
+                Log::info("Mail already sent to {$teacher->first_name} ({$teacher->id}), skipping...");
+                continue;
+            }
+            Log::info("Sending mail to {$teacher->first_name} ({$teacher->id})");
+            Mail::to($teacher->user->email)->queue(new CustomEmail($mail, $teacher, null));
+        }
+    }
+
+    public function sendEndYearCommunicationEmail()
+    {
+        $date = EditableDate::find(EditableDate::END_YEAR_COMMUNICATION_EMAIL);
+        $mail = EditableEmail::find(EditableEmail::$MAIL_END_YEAR_COMMUNICATION);
+        // is start date today?
+        if (!$date->isCurrentDay()) {
+            return;
+        }
+
+        Log::info('Sending ' . EditableEmail::$MAIL_END_YEAR_COMMUNICATION[0]);
 
         $teachers = Teacher::all();
         foreach ($teachers as $teacher) {
