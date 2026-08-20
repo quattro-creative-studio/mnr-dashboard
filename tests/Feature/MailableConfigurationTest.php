@@ -29,7 +29,7 @@ class MailableConfigurationTest extends TestCase
     /** @var array */
     private $savedEnv = [];
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         foreach ($this->savedEnv as $key => $value) {
             if ($value === false) {

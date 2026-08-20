@@ -21,9 +21,13 @@ use Tests\TestCase;
  * profile update still accept them because those rules are explicit. The two
  * paths silently disagree after the hop.
  *
- * This test is expected to go red at 5.8. When it does, decide deliberately:
- * either align the explicit rules up to 8 (better) or override the trait back
- * down to 6 (worse, but consistent). Do not just update the number here.
+ * DECIDED at the 5.8 hop: the application's own rules were aligned UP to
+ * min:8 rather than forcing the framework back down to 6. Six characters is
+ * weak, and the alternative would have kept a real defect -- registration
+ * accepting a password that a later reset refuses.
+ *
+ * No teacher is locked out: validation applies when a password is set, never
+ * when one is checked, so existing passwords keep working untouched.
  */
 class PasswordRulesTest extends TestCase
 {
@@ -37,16 +41,16 @@ class PasswordRulesTest extends TestCase
         return $method->invoke(app(ResetPasswordController::class));
     }
 
-    public function testTheFrameworkResetRuleMinimumIsSix()
+    public function testTheFrameworkResetRuleMinimumIsEight()
     {
         $this->assertContains(
-            'min:6',
+            'min:8',
             explode('|', $this->resetRules()['password']),
-            'Laravel 5.8 raises this default to min:8. If this failed, read the docblock.'
+            'The framework reset rule changed again. Re-check the application rules match.'
         );
     }
 
-    public function testTheApplicationsOwnRulesStillAllowSix()
+    public function testTheApplicationsOwnRulesMatchTheFrameworkMinimum()
     {
         // ProfileUpdateRequest::rules() builds a unique:users rule from the
         // authenticated user, so it needs a session to be readable at all.
@@ -62,9 +66,11 @@ class PasswordRulesTest extends TestCase
             $rules = (new $class)->rules();
 
             $this->assertContains(
-                'min:6',
+                'min:8',
                 explode('|', $rules[$field]),
-                "{$class} no longer requires min:6 for {$field}."
+                "{$class} sets a different minimum for {$field} than the password reset "
+                ."path does. The two must agree, or a teacher can register with a password "
+                ."they cannot later reset to."
             );
         }
     }

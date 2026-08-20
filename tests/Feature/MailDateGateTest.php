@@ -33,7 +33,7 @@ class MailDateGateTest extends TestCase
 {
     use RefreshDatabase, BuildsDomainFixtures;
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         Carbon::setTestNow();
 

@@ -27,7 +27,7 @@ class EligibilityTest extends TestCase
     /** @var int */
     private $threshold = 5;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 

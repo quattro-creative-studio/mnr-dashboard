@@ -25,7 +25,7 @@ class TeacherRegisterRequest extends FormRequest {
             'teacher_first_name' => 'required|string',
             'teacher_last_name' => 'required|string',
             'teacher_email' => 'required|email|unique:users,email',
-            'teacher_password' => 'required|string|min:6|confirmed',
+            'teacher_password' => 'required|string|min:8|confirmed',
             'teacher_phone' => 'required|string',
             'data_protection' => 'required|accepted',
         ];

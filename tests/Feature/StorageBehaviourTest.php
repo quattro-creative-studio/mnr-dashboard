@@ -35,7 +35,7 @@ class StorageBehaviourTest extends TestCase
     /** @var string */
     private $root;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -47,7 +47,7 @@ class StorageBehaviourTest extends TestCase
         ]]);
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         if (is_dir($this->root)) {
             exec('rm -rf '.escapeshellarg($this->root));
