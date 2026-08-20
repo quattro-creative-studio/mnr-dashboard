@@ -48,6 +48,23 @@ class MailTransportTest extends TestCase
         );
     }
 
+    /**
+     * The guard in Tests\TestCase is what actually enforces this on every test.
+     * This asserts it is wired up, the same way DatabaseIsolationTest does for
+     * the database.
+     */
+    public function testTestsCannotDeliverMail()
+    {
+        $driver = config('mail.driver') ?: config('mail.default');
+
+        $this->assertContains(
+            $driver,
+            ['array', 'log', 'null'],
+            'The test suite resolved a real mail transport. A green run could have '
+            .'delivered mail to real recipients.'
+        );
+    }
+
     public function testTheApplicationDeclaresAnSmtpHostAndPort()
     {
         // Not asserting the driver itself: phpunit.xml overrides it to "array"

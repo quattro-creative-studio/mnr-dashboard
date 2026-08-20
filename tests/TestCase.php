@@ -26,6 +26,7 @@ abstract class TestCase extends BaseTestCase
     protected function setUpTraits()
     {
         $this->guardAgainstNonTestDatabase();
+        $this->guardAgainstSendingRealMail();
 
         return parent::setUpTraits();
     }
@@ -52,6 +53,40 @@ abstract class TestCase extends BaseTestCase
             ."name ends in _test (see the <php> block in phpunit.xml).",
             var_export($database, true),
             $connection
+        ));
+    }
+
+    /**
+     * Guard the mail transport, for the same reason as the database.
+     *
+     * phpunit.xml neutralises mail with MAIL_DRIVER=array. That key is read by
+     * config/mail.php only while the flat, pre-Laravel-7 mail config survives.
+     * Restructuring into the `mailers` array -- which becomes mandatory at
+     * Laravel 9 with Symfony Mailer -- renames it to MAIL_MAILER, at which
+     * point the override silently stops applying and the suite falls back to
+     * whatever .env says. That is usually SMTP.
+     *
+     * The failure mode is not a red test. It is a green test run that quietly
+     * delivered mail to real teachers. So assert on the resolved driver rather
+     * than trusting the override, and read both spellings so the check keeps
+     * working across the whole upgrade ladder.
+     *
+     * @return void
+     */
+    protected function guardAgainstSendingRealMail()
+    {
+        $driver = config('mail.driver') ?: config('mail.default');
+
+        if (in_array($driver, ['array', 'log', 'null'], true)) {
+            return;
+        }
+
+        throw new RuntimeException(sprintf(
+            "Refusing to run tests with mail driver [%s].\n"
+            ."Tests must not be able to deliver mail. If this fired after a framework\n"
+            ."upgrade, config/mail.php has probably moved from MAIL_DRIVER to\n"
+            ."MAIL_MAILER -- update the <php> block in phpunit.xml to match.",
+            var_export($driver, true)
         ));
     }
 }
