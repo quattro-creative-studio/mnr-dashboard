@@ -12,7 +12,12 @@ return [
     | your application here. By default, Laravel is setup for SMTP mail.
     |
     | Supported: "smtp", "sendmail", "mailgun", "mandrill", "ses",
-    |            "sparkpost", "log", "array"
+    | Supported: "smtp", "sendmail", "mailgun", "ses", "log", "array"
+    |
+    | This application uses "smtp". That is deliberate and load bearing: the
+    | SparkPost driver is removed in Laravel 6.0, and SMTP is the one transport
+    | every Laravel version supports, so the mail vendor can be changed by
+    | editing .env alone -- no code, no package, no framework coupling.
     |
     */
 
