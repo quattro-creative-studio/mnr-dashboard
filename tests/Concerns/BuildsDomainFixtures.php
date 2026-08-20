@@ -19,11 +19,26 @@ use Carbon\Carbon;
  */
 trait BuildsDomainFixtures
 {
-    protected function makeTeacher(array $attributes = []): Teacher
+    /**
+     * The Teacher factory picks its salutation with inRandomOrder(), which makes
+     * every assertion about titles ("Monsieur" vs "Madame") flaky. Fixtures in a
+     * characterisation suite have to be deterministic, so pin it here and let a
+     * caller opt into a different one explicitly.
+     *
+     * The user is created through the User factory rather than the other way
+     * round: the User factory's default creates its own Teacher eagerly, so
+     * building the Teacher first would leave an orphan behind and quietly change
+     * what Teacher::all() returns.
+     */
+    protected function makeTeacher(array $userAttributes = [], int $salutationId = 1): Teacher
     {
-        $user = factory(User::class)->create($attributes);
+        $user = factory(User::class)->create($userAttributes);
 
-        return $user->teacher;
+        $teacher = $user->teacher;
+        $teacher->salutation_id = $salutationId;
+        $teacher->save();
+
+        return $teacher->fresh();
     }
 
     protected function makeClass(Teacher $teacher = null, array $attributes = []): SchoolClass
