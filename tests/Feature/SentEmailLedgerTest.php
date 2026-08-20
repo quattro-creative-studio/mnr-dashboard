@@ -110,10 +110,10 @@ class SentEmailLedgerTest extends TestCase
 
         $row = SentEmail::query()->whereNotNull('school_class_id')->first();
 
-        $this->assertInternalType('int', $row->school_class_id);
-        $this->assertInternalType('int', $class->id);
+        $this->assertIsInt($row->school_class_id);
+        $this->assertIsInt($class->id);
 
         $userRow = SentEmail::query()->whereNotNull('user_id')->first();
-        $this->assertInternalType('int', $userRow->user_id);
+        $this->assertIsInt($userRow->user_id);
     }
 }

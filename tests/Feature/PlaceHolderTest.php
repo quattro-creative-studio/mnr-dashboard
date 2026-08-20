@@ -105,11 +105,11 @@ class PlaceHolderTest extends TestCase
         $this->assertSame('M.', PlaceHolder::getReplacement('%TITRE%', $teacher, $class, null));
         $this->assertSame('7ST1', PlaceHolder::getReplacement('%NOM_CLASSE%', $teacher, $class, null));
 
-        $this->assertContains(
+        $this->assertStringContainsString(
             $class->certificate->uid,
             PlaceHolder::getReplacement('%LIEN_CERTIFICAT%', $teacher, $class, null)
         );
-        $this->assertContains(
+        $this->assertStringContainsString(
             'party-token-xyz',
             PlaceHolder::getReplacement('%LIEN_FETE_OUI%', $teacher, $class, null)
         );
