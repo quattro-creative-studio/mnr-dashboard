@@ -2,11 +2,10 @@
 
 namespace App\Http\Services;
 
-use App\Http\Controllers\Controller;
 use App\SchoolClass;
 use tFPDF;
 
-class NewCertificateService extends Controller {
+class NewCertificateService {
 
     private $fontSizeLarge = 25;
     private $lineHeight = 11.5;

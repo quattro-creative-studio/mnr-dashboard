@@ -6,7 +6,6 @@ namespace App\Http\Managers;
 
 use App\EditableDate;
 use App\EditableEmail;
-use App\Http\Controllers\Controller;
 use App\Http\Repositories\EmailRepository;
 use App\Http\Services\NewCertificateService;
 use App\Mail\CustomEmail;
@@ -17,7 +16,7 @@ use Log;
 use Ramsey\Uuid\Uuid;
 use Storage;
 
-class SchoolClassManager extends Controller
+class SchoolClassManager
 {
 
     /**

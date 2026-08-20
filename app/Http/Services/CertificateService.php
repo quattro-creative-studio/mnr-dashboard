@@ -2,11 +2,10 @@
 
 namespace App\Http\Services;
 
-use App\Http\Controllers\Controller;
 use App\SchoolClass;
 use Fpdf\Fpdf;
 
-class CertificateService extends Controller {
+class CertificateService {
 
     private $fontSizeSmall = 18;
     private $fontSizeLarge = 24;
