@@ -45,8 +45,8 @@ class TeacherUpdatedClassMail extends Mailable {
     public function build() {
         return $this
             ->subject('Enseignant a changé une classe')
-            ->from(env('MAIL_FROM_ADDRESS'), env('APP_NAME'))
-            ->replyTo(env('MAIL_REPLY_TO'))
+            ->from(config('mail.from.address'), config('mail.from.name'))
+            ->replyTo(config('mail.reply_to.address'))
             ->view('emails.teacher-updated-class')
             ->with([
                 'teacher' => $this->teacher,

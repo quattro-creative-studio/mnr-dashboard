@@ -62,6 +62,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Global "Reply-To" Address
+    |--------------------------------------------------------------------------
+    |
+    | Replies are handled by a different mailbox than the sending address, so
+    | every Mailable sets Reply-To explicitly. This lives in config rather than
+    | being read from env() at send time: env() returns null once config:cache
+    | has run, and a null Reply-To fails silently.
+    |
+    */
+
+    'reply_to' => [
+        'address' => env('MAIL_REPLY_TO'),
+        'name' => env('MAIL_FROM_NAME', 'Example'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | E-Mail Encryption Protocol
     |--------------------------------------------------------------------------
     |
