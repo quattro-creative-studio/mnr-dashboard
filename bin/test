@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# Run the test suite on the PHP version this branch targets.
+#
+# The CLI default on this machine is PHP 8.5, on which Laravel 5.7 will not
+# boot, so the suite has to be invoked through a pinned Herd binary. Update
+# MNR_PHP below as the upgrade ladder advances:
+#
+#   php74  Laravel 5.7 - 8.0     php81  Laravel 10
+#   php80  Laravel 9             php82  Laravel 11 - 12
+#                                php83+ Laravel 13
+#
+# Override per-invocation with:  MNR_PHP=php81 bin/test
+#
+set -euo pipefail
+
+PHP_BIN="${MNR_PHP:-php74}"
+HERD_BIN="$HOME/Library/Application Support/Herd/bin/$PHP_BIN"
+
+if [ -x "$HERD_BIN" ]; then
+    PHP="$HERD_BIN"
+else
+    echo "warning: $HERD_BIN not found, falling back to the default php" >&2
+    PHP="$(command -v php)"
+fi
+
+echo "→ PHP $("$PHP" -r 'echo PHP_VERSION;')  ($PHP)"
+exec "$PHP" vendor/bin/phpunit "$@"
