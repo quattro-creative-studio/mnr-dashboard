@@ -2,29 +2,36 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Facades\Storage;
-use League\Flysystem\FileNotFoundException as FlysystemFileNotFoundException;
+use League\Flysystem\UnableToRetrieveMetadata;
 use Tests\TestCase;
 
 /**
- * Characterisation: Flysystem 1 storage semantics, recorded on Laravel 5.7.
+ * Flysystem storage semantics. Written on Laravel 5.7 to predict the Flysystem
+ * 1 -> 3 change; UPDATED at the Laravel 9 hop, where it fired exactly as
+ * intended. Four assertions went red at the commit that caused the change,
+ * instead of the change being invisible.
  *
- * This is the most valuable file in the suite and the one with the shortest
- * shelf life. Laravel 9 replaces Flysystem 1 with Flysystem 3, and the change
- * is not an API rename -- it is a change from "raise on failure" to "return a
- * falsy value on failure". Every assertion below is expected to CHANGE at that
- * hop. That is the point: written now, these tests turn an invisible semantic
- * shift into a red suite at the exact commit that causes it.
+ * What actually flipped:
  *
- * Expected flips at Laravel 9 (documented, not yet true):
- *   get() on a missing file        throws  ->  returns null
- *   delete() on a missing file     false   ->  true
- *   put() on failure               true    ->  returns false
+ *   get() on a missing file         threw   ->  returns null
+ *   readStream() on a missing file  threw   ->  returns null
+ *   delete() on a missing file      false   ->  true
+ *   size() on a missing file        League\Flysystem\FileNotFoundException
+ *                                           ->  League\Flysystem\UnableToRetrieveMetadata
  *
- * The application reads storage in 19 places across 9 files. The one that
- * matters most is certificate download: today a missing PDF fails loudly, and
- * after the hop it will build a response and die inside the stream instead.
+ * The practical impact on this application turned out to be nil, which is only
+ * worth knowing because it was measured rather than assumed:
+ *
+ *   - Storage::get() and Storage::readStream(): zero call sites. The change
+ *     from raising to returning null has nothing to apply to.
+ *   - Storage::delete(): four call sites, every one of which discards the
+ *     return value, so false -> true changes nothing.
+ *
+ * One correction to the migration plan, which predicted that Storage::download()
+ * on a missing file would stop failing fast and instead build a response that
+ * dies mid-stream. It does not: download() still raises, because it reads the
+ * file size to set Content-Length. Verified, not assumed.
  *
  * @see app/Certificate.php
  * @see app/Http/Controllers/CertificateController.php
@@ -61,34 +68,49 @@ class StorageBehaviourTest extends TestCase
         return Storage::disk('probe');
     }
 
-    public function testReadingAMissingFileThrows()
+    public function testReadingAMissingFileReturnsNullInsteadOfThrowing()
     {
-        $this->expectException(FileNotFoundException::class);
-
-        $this->disk()->get('does-not-exist.txt');
+        $this->assertNull(
+            $this->disk()->get('does-not-exist.txt'),
+            'Flysystem 1 raised FileNotFoundException here. Nothing in this application '
+            .'calls Storage::get(), so the change has no point of application -- but any '
+            .'new caller must check the return value rather than rely on an exception.'
+        );
     }
 
-    public function testReadingAMissingStreamThrows()
+    public function testReadingAMissingStreamReturnsNullInsteadOfThrowing()
     {
-        $this->expectException(FileNotFoundException::class);
-
-        $this->disk()->readStream('does-not-exist.txt');
+        $this->assertNull($this->disk()->readStream('does-not-exist.txt'));
     }
 
-    public function testMetadataOnAMissingFileThrowsTheFlysystemException()
+    public function testMetadataOnAMissingFileRaisesUnableToRetrieveMetadata()
     {
-        $this->expectException(FlysystemFileNotFoundException::class);
+        $this->expectException(UnableToRetrieveMetadata::class);
 
         $this->disk()->size('does-not-exist.txt');
     }
 
-    public function testDeletingAMissingFileReportsFailure()
+    public function testDeletingAMissingFileNowReportsSuccess()
     {
-        $this->assertFalse(
+        $this->assertTrue(
             $this->disk()->delete('does-not-exist.txt'),
-            'Flysystem 1 reports false here; Flysystem 3 reports true. '
-            .'Anything treating this as "did we actually remove something" flips meaning.'
+            'Flysystem 3 reports true whether or not anything was removed. All four '
+            .'Storage::delete() call sites discard the return value, so nothing depends '
+            .'on this -- but a future caller must not read it as "something was deleted".'
         );
+    }
+
+    /**
+     * The plan expected this to become a 200 that dies mid-stream. It does not:
+     * download() reads the file size to set Content-Length, so a missing file
+     * still fails before any bytes are sent. Pinned so that if a future
+     * Flysystem stops raising here, the certificate route is re-examined.
+     */
+    public function testDownloadingAMissingFileStillFailsBeforeStreaming()
+    {
+        $this->expectException(UnableToRetrieveMetadata::class);
+
+        $this->disk()->download('does-not-exist.txt');
     }
 
     public function testDeletingAnExistingFileReportsSuccess()

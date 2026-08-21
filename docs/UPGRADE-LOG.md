@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 4/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 5/9 fait**
 
 ---
 
@@ -15,12 +15,12 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **8.83.29** | 13.x |
-| PHP (application) | **7.4.33** | 8.5 |
-| PHP (résolution composer) | `config.platform.php` = **7.4.33** | 8.3+ |
+| Laravel | **9.52.22** | 13.x |
+| PHP (application) | **8.0.30** | 8.5 |
+| PHP (résolution composer) | `config.platform.php` = **8.0.2** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **57 tests / 145 assertions — verte** | — |
+| Suite de tests | **58 tests / 146 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -28,11 +28,11 @@
 ```bash
 git checkout upgrade/phase-0
 composer test                 # passe par bin/test, qui épingle le binaire PHP
-MNR_PHP=php80 composer test   # pour changer de version PHP après un bump
+MNR_PHP=php81 composer test   # pour changer de version PHP après un bump
 ```
 
-`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut `php74`) parce que
-le PHP par défaut de la machine est 8.5, sur lequel Laravel 5.x ne démarre pas.
+`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php80`**) parce que
+le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 
 ---
 
@@ -60,8 +60,8 @@ le PHP par défaut de la machine est 8.5, sur lequel Laravel 5.x ne démarre pas
 | 2 | 5.8 → **6.20.45** | 7.4 | ✅ |
 | 3 | 6.0 → **7.30.7** | 7.4 | ✅ |
 | 4 | 7.0 → **8.83.29** | 7.4 | ✅ |
-| 5 | 8.0 → 9.0 | **8.0.2** | ⏭️ suivant |
-| 6 | 9.0 → 10.0 | **8.1** | — |
+| 5 | 8.0 → **9.52.22** | **8.0.30** | ✅ |
+| 6 | 9.0 → 10.0 | **8.1** | ⏭️ suivant |
 | 7 | 10.0 → 11.0 | **8.2** | — |
 | 8 | 11.0 → 12.0 | 8.2 | — |
 | 9 | 12.0 → 13.0 | **8.3 → 8.5** | — |
@@ -279,6 +279,59 @@ survit au prochain changement de représentation.
 > Note : `Password::defaults()` sans configuration vaut `Password::min(8)`. Le déclarer
 > explicitement dans `AppServiceProvider` le rendrait visible et permettrait d'ajouter des
 > règles de complexité. Amélioration possible, non faite.
+
+### D-21 · Premier saut PHP : 7.4 → 8.0.30
+**Hop 5.** `require.php` en `^8.0.2`, `config.platform.php` en `8.0.2`, et `bin/test`
+passe par défaut sur `php80`. Les 204 fichiers passaient déjà le linter PHP 8.0 avant le
+bump — vérifié, pas supposé.
+
+### D-22 · Flysystem 1 → 3 : aucun impact pratique
+**Hop 5.** L'élément que le plan désignait comme **le plus coûteux du hop**. Le
+`StorageBehaviourTest`, écrit en Phase 0 pour prédire cette bascule, a fait rougir
+**quatre assertions au commit exact** qui l'a provoquée.
+
+Ce qui a réellement changé :
+
+| Appel sur fichier manquant | Flysystem 1 | Flysystem 3 |
+|---|---|---|
+| `get()` | levait | **`null`** |
+| `readStream()` | levait | **`null`** |
+| `delete()` | `false` | **`true`** |
+| `size()` | `FileNotFoundException` | **`UnableToRetrieveMetadata`** |
+
+**Impact mesuré : nul.** `Storage::get()` et `readStream()` n'ont **aucun** appelant dans
+l'application. Les **quatre** appels à `Storage::delete()` ignorent tous la valeur de
+retour. Rien ne dépendait de l'ancienne sémantique.
+
+> **Correction au plan.** Il prédisait que `Storage::download()` sur un fichier manquant
+> cesserait d'échouer vite et construirait une réponse mourant en plein flux. **Faux** :
+> `download()` lève toujours, parce qu'il lit la taille du fichier pour `Content-Length`.
+> Vérifié. Le chemin de téléchargement des certificats (B-01) est donc inchangé.
+
+### D-23 · `fideloper/proxy` supprimé, `TrustProxies` reparenté
+**Hop 5.** Symfony 6 supprime `Request::HEADER_X_FORWARDED_ALL`, référencé à **deux**
+endroits — le middleware et `config/trustedproxy.php`, ce dernier évalué au boot.
+
+`TrustProxies` hérite désormais de `Illuminate\Http\Middleware\TrustProxies` (absorbé
+dans le cœur en 8.54.0), `config/trustedproxy.php` est supprimé, et `$proxies` porte sa
+valeur en propriété.
+
+**Vérifié plutôt que supposé** : le remplacement vaut exactement **30 (`0b011110`)**, la
+même valeur que l'ancienne constante. C'est une équivalence, pas un élargissement —
+`X_FORWARDED_PREFIX` reste exclu. **La confiance aux proxies est inchangée par ce hop.**
+
+> ⚠️ `$proxies = '*'` est conservé tel quel pour ne rien changer pendant la montée. **Doit
+> devenir `null` sur Forge** — sinon n'importe quel client peut falsifier son IP via
+> `X-Forwarded-For`. Voir la checklist §6.
+
+### D-24 · Swift Mailer → Symfony Mailer : sans effet
+**Hop 5.** Audité avant le bump : les cinq Mailables n'utilisent que `from`, `replyTo`,
+`subject`, `view` et `with` — toutes préservées. **Aucun fichier de `app/Mail/` n'a
+changé.** Transport confirmé après coup : `Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport`,
+SwiftMailer désinstallé.
+
+### D-25 · `facade/ignition` → `spatie/laravel-ignition`
+**Hop 5.** Le paquet a changé de mainteneur et de nom en Laravel 9.
 
 ---
 
