@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **ÉCHELLE TERMINÉE — 9/9**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/laravel-5.7-to-13` · **ÉCHELLE TERMINÉE — 9/9**
 
 ---
 
@@ -26,7 +26,7 @@
 ### Reprendre le travail
 
 ```bash
-git checkout upgrade/phase-0
+git checkout upgrade/laravel-5.7-to-13
 composer test                 # passe par bin/test, qui épingle le binaire PHP
 composer audit               # doit rester propre
 ```

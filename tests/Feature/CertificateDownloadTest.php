@@ -10,47 +10,34 @@ use Tests\Concerns\BuildsDomainFixtures;
 use Tests\TestCase;
 
 /**
- * Characterisation: the public certificate download path.
+ * The public certificate download path. Originally written to characterise two
+ * defects; FIXED once the upgrade was complete, so it now pins the correct
+ * behaviour instead.
  *
- * This is deliberately a record of current behaviour, NOT an endorsement of
- * it. Nothing here is fixed; the tests exist because this route sits directly
- * in the blast radius of the Flysystem 1 -> 3 change at Laravel 9.
+ * Both routes are unauthenticated and reached only through an unguessable uid
+ * mailed to a teacher. There are two ordinary ways to have nothing to serve,
+ * and both used to produce a 500 with a stack trace:
  *
- * CertificateController::downloadCertificate() does:
+ *   1. An unknown uid -- a mistyped, expired or regenerated link.
+ *   2. A known row whose PDF is gone. Certificates are regenerated between
+ *      contest years and the old directory is deleted with them, so a stale
+ *      link points at a row that still exists and a file that does not.
  *
- *     $cert = Certificate::where('uid', $certificate)->first();
- *     return \Storage::download($cert->url);
- *
- * There is no guard on the model and no guard on the file. Two consequences,
- * both pinned below:
- *
- *   1. An unknown uid dereferences null and returns 500 instead of 404, on an
- *      unauthenticated public route.
- *   2. A known certificate whose PDF is missing fails inside Storage. Today
- *      that raises before a response is produced. Under Flysystem 3 reads stop
- *      raising and start returning falsy, so this is expected to change shape
- *      -- the response gets built and then dies mid-stream, which is much
- *      harder to diagnose from a log.
- *
- * If either assertion below flips during the upgrade, that is the signal.
+ * Both are now 404. Nothing about either is exceptional enough to page anyone.
  */
 class CertificateDownloadTest extends TestCase
 {
     use RefreshDatabase, BuildsDomainFixtures;
 
-    public function testAnUnknownCertificateUidIsNotHandled()
+    public function testAnUnknownCertificateUidIsNotFound()
     {
-        $response = $this->get('/certificat/download/'.Uuid::uuid4()->toString());
+        $unknown = Uuid::uuid4()->toString();
 
-        $this->assertSame(
-            500,
-            $response->getStatusCode(),
-            'Current behaviour: the controller dereferences a null model. '
-            .'A 404 would be correct, and this is the assertion to change when that is fixed.'
-        );
+        $this->get('/certificat/download/'.$unknown)->assertStatus(404);
+        $this->get('/certificat/'.$unknown)->assertStatus(404);
     }
 
-    public function testAKnownCertificateWithAMissingFileFailsBeforeRespondingToday()
+    public function testAKnownCertificateWithAMissingFileIsNotFound()
     {
         Storage::fake();
 
@@ -61,15 +48,8 @@ class CertificateDownloadTest extends TestCase
             'uid' => Uuid::uuid4()->toString(),
         ]);
 
-        $response = $this->get('/certificat/download/'.$certificate->uid);
-
-        $this->assertSame(
-            500,
-            $response->getStatusCode(),
-            'Flysystem 1 raises on a missing read, so the failure happens before a '
-            .'response is streamed. Under Flysystem 3 this is expected to become a '
-            .'200 that dies mid-stream instead.'
-        );
+        $this->get('/certificat/download/'.$certificate->uid)
+            ->assertStatus(404);
     }
 
     public function testAValidCertificateDownloads()
