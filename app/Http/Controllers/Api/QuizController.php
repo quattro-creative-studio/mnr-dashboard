@@ -41,8 +41,13 @@ class QuizController extends Controller {
                 continue;
             }
             if ($quizCode->assignment->response()->exists()) {
+                // continue, not return: this abandons ONE already-recorded code,
+                // not the rest of the payload. quiz-maker retries a delivery by
+                // replaying it in full, so a `return` here dropped every later
+                // response in the batch -- silently, since the endpoint always
+                // answers an empty 200 and never reports failure upstream.
                 \Log::warning("Given code is already in database.. skipping it", ['code' => $code]);
-                return response('');
+                continue;
             }
             $quizCode->assignment->response()->updateOrCreate([
                 'quizmaker_response_id' => $res->id,

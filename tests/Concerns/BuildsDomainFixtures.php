@@ -84,18 +84,35 @@ trait BuildsDomainFixtures
     }
 
     /**
-     * Build the full quiz-maker chain a webhook payload has to match against:
+     * Build the quiz-maker chain a webhook payload matches against:
      * quiz -> quiz_in_language (holds quiz_maker_id) -> assignment -> code.
+     *
+     * The language record is reused when one already exists for that
+     * quiz_maker_id, because that is the real shape: a quiz has ONE record per
+     * language, carrying MANY codes -- one per participating class. The
+     * controller resolves the language with a single ->first(), so a fixture
+     * that created a second one would leave its codes unreachable and quietly
+     * make a test pass or fail for the wrong reason.
      */
     protected function makeQuizCode(SchoolClass $class, string $quizMakerId, string $code): QuizCode
     {
-        $assignment = $this->makeQuizAssignment($class);
+        $language = QuizInLanguage::query()->where('quiz_maker_id', $quizMakerId)->first();
 
-        $language = QuizInLanguage::create([
-            'language' => 'fr',
-            'quiz_id' => $assignment->quiz_id,
-            'quiz_maker_id' => $quizMakerId,
-        ]);
+        if ($language === null) {
+            $assignment = $this->makeQuizAssignment($class);
+
+            $language = QuizInLanguage::create([
+                'language' => 'fr',
+                'quiz_id' => $assignment->quiz_id,
+                'quiz_maker_id' => $quizMakerId,
+            ]);
+        } else {
+            // Same quiz, another class: one assignment per class per quiz.
+            $assignment = QuizAssignment::create([
+                'quiz_id' => $language->quiz_id,
+                'school_class_id' => $class->id,
+            ]);
+        }
 
         return QuizCode::create([
             'quiz_assignment_id' => $assignment->id,

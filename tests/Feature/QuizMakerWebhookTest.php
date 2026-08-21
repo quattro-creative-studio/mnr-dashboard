@@ -118,22 +118,23 @@ class QuizMakerWebhookTest extends TestCase
     }
 
     /**
-     * Documented oddity, not a recommendation.
+     * FIXED after the upgrade. The controller used to `return` on an
+     * already-recorded code rather than `continue`, so one duplicate abandoned
+     * every remaining response in the same payload -- while its own log line
+     * said "skipping it", which is what the author plainly intended.
      *
-     * On a code whose assignment already has a response the controller does
-     * `return`, not `continue` -- so one already-seen code abandons every
-     * remaining response in the same payload. A retry from quiz-maker that
-     * replays earlier results therefore drops the new ones.
-     *
-     * Pinned deliberately: if this is ever changed to `continue`, that should
-     * be a decision someone makes, not a side effect of a framework upgrade.
+     * It matters because quiz-maker retries a delivery by replaying it in full:
+     * the retry that was meant to recover a lost result was itself guaranteed
+     * to drop everything after the first code it had already seen. Nothing
+     * surfaced it, because the endpoint always answers an empty 200.
      */
-    public function testADuplicateCodeAbandonsTheRestOfTheBatch()
+    public function testADuplicateCodeDoesNotAbandonTheRestOfTheBatch()
     {
         Storage::fake();
-        $class = $this->makeClass();
-        $this->makeQuizCode($class, 'QM-100', 'CODE-A');
-        $second = $this->makeQuizCode($class, 'QM-100', 'CODE-B');
+
+        // The real shape of a payload: one quiz, two classes, one code each.
+        $first = $this->makeQuizCode($this->makeClass(), 'QM-100', 'CODE-A');
+        $second = $this->makeQuizCode($this->makeClass(), 'QM-100', 'CODE-B');
 
         // First delivery records CODE-A.
         $this->post(route('api.webhook.quizmaker'), $this->payload('QM-100', [
@@ -142,16 +143,26 @@ class QuizMakerWebhookTest extends TestCase
 
         $this->assertSame(1, QuizResponse::query()->count());
 
-        // Redelivery replays CODE-A and adds CODE-B. CODE-B is lost.
+        // Redelivery replays CODE-A and adds CODE-B. CODE-B must be recorded.
         $this->post(route('api.webhook.quizmaker'), $this->payload('QM-100', [
             $this->response(1, 'CODE-A', 4, 1772619630000),
             $this->response(2, 'CODE-B', 9, 1772619630000),
         ]))->assertStatus(200);
 
         $this->assertSame(
-            1,
+            2,
             QuizResponse::query()->count(),
-            'CODE-B was dropped because the duplicate CODE-A returned out of the loop.'
+            'A replayed CODE-A must not stop CODE-B being recorded.'
+        );
+        $this->assertSame(
+            9,
+            QuizResponse::query()->where('quiz_assignment_id', $second->quiz_assignment_id)->value('score'),
+            'CODE-B was recorded with the wrong score.'
+        );
+        $this->assertSame(
+            4,
+            QuizResponse::query()->where('quizmaker_response_id', 1)->value('score'),
+            'The already-recorded CODE-A must be left exactly as it was.'
         );
     }
 }
