@@ -116,17 +116,19 @@ class PlaceHolderTest extends TestCase
     }
 
     /**
-     * The follow-up route is declared as /suivi/{token}/{stillNonSmoking} but
-     * PlaceHolder::getReplacement() calls route('follow-up', [..., 'status' => ...]).
-     * The names do not match. Laravel 5.7 tolerates this and fills the missing
-     * segment positionally from the leftover value, producing /suivi/TOK/true.
+     * FIXED at the 6.0 hop, and this test is why it was caught.
      *
-     * That is a property of the URL generator, not of this application, and it
-     * has no test upstream protecting it. If a later Laravel throws
-     * UrlGenerationException or emits /suivi/TOK?status=true instead, every
-     * follow-up mail silently ships a broken link. Pin the current output.
+     * The route is declared /suivi/{token}/{stillNonSmoking}, but the code called
+     * route('follow-up', [..., 'status' => ...]). Laravel 5.x tolerated the
+     * mismatch and filled the missing segment positionally from the leftover
+     * value, producing the correct URL by accident. Laravel 6 raises
+     * UrlGenerationException instead.
+     *
+     * Every editable email body is free to contain %SUIVI_OUI% / %SUIVI_NON%, so
+     * without this the whole send would have thrown the first time an admin used
+     * one. The generated URLs are unchanged -- only the parameter name is.
      */
-    public function testFollowUpLinksAreBuiltFromMismatchedRouteParameterNames()
+    public function testFollowUpLinksUseTheDeclaredRouteParameterName()
     {
         [$teacher, $class] = $this->fullyWiredClass();
 

@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · hop 1/9 fait
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 2/9 fait**
 
 ---
 
@@ -15,7 +15,7 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **5.8.38** | 13.x |
+| Laravel | **6.20.45** | 13.x |
 | PHP (application) | **7.4.33** | 8.5 |
 | PHP (résolution composer) | `config.platform.php` = **7.4.33** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
@@ -57,8 +57,8 @@ le PHP par défaut de la machine est 8.5, sur lequel Laravel 5.x ne démarre pas
 | Hop | Version | PHP | État |
 |---|---|---|---|
 | 1 | 5.7.29 → **5.8.38** | 7.4 | ✅ |
-| 2 | 5.8 → 6.0 | 7.4 | ⏭️ suivant |
-| 3 | 6.0 → 7.0 | 7.4 | — |
+| 2 | 5.8 → **6.20.45** | 7.4 | ✅ |
+| 3 | 6.0 → 7.0 | 7.4 | ⏭️ suivant |
 | 4 | 7.0 → 8.0 | 7.4 | — |
 | 5 | 8.0 → 9.0 | **8.0.2** | — |
 | 6 | 9.0 → 10.0 | **8.1** | — |
@@ -192,6 +192,24 @@ Mix 6 épinglé (`webpack@5.106.2` + override `webpackbar@^7`). Sortie de secour
 nécessaire : **webpack 5 nu**, ~40 lignes, qui produit le même `mix-manifest.json` — donc
 `mix()` continue de fonctionner et **aucune vue ne change**.
 
+### D-12 · Paramètre de route de suivi corrigé
+**Hop 2.** `PlaceHolder::getReplacement()` appelait
+`route('follow-up', ['token' => …, 'status' => …])` alors que la route déclare
+`/suivi/{token}/{stillNonSmoking}`. Laravel 5.x comblait le segment manquant **par
+position** et produisait la bonne URL par accident ; **Laravel 6 lève
+`UrlGenerationException`**.
+
+Portée réelle : n'importe quel corps d'email éditable peut contenir `%SUIVI_OUI%` ou
+`%SUIVI_NON%`, donc **tout envoi utilisant ces jetons aurait planté**. Les URL produites
+sont inchangées (`/suivi/TOK/true`), seul le nom du paramètre l'est.
+
+C'est le test `PlaceHolderTest` — écrit en Phase 0 précisément pour surveiller cette
+tolérance — qui l'a attrapé. Trois tests en échec, cause unique.
+
+### D-13 · `filp/whoops` → `facade/ignition`
+**Hop 2.** Laravel 6 remplace whoops par ignition comme page d'erreur. `filp/whoops`
+retiré, `facade/ignition ^1.4` ajouté en dev.
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -202,8 +220,8 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 | # | Défaut | Où | Note |
 |---|---|---|---|
 | B-01 | Un uid de certificat inconnu renvoie **500 au lieu de 404**, sur une route publique non authentifiée. `->first()` déréférencé sans garde. | `CertificateController::downloadCertificate()` | `CertificateDownloadTest`. Chemin le plus exposé au passage Flysystem 3. |
+| ~~B-03~~ | **Corrigé au hop 2** — voir D-12. | | |
 | B-02 | Le webhook fait **`return` et non `continue`** sur un code déjà enregistré : un rejeu contenant un résultat connu **abandonne tous les suivants**. | `Api\QuizController` | `QuizMakerWebhookTest`. Vrai bug, correctif à prévoir après la migration. |
-| B-03 | `route('follow-up', [... 'status' => …])` ne correspond pas au paramètre déclaré `{stillNonSmoking}`. Laravel 5.7 comble par position. | `PlaceHolder::getReplacement()` | `PlaceHolderTest`. Tolérance du générateur d'URL, pas conception. |
 
 ---
 
