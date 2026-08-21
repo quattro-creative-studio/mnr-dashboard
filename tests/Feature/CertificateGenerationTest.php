@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Managers\SchoolClassManager;
-use App\Http\Services\NewCertificateService;
+use App\Http\Services\CertificateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\BuildsDomainFixtures;
@@ -30,7 +30,7 @@ class CertificateGenerationTest extends TestCase
     {
         $class = $this->makeClass(null, ['name' => '7ST1']);
 
-        $pdf = app(NewCertificateService::class)->generateCertificate($class);
+        $pdf = app(CertificateService::class)->generateCertificate($class);
 
         $this->assertSame('%PDF-', substr($pdf, 0, 5), 'Output is not a PDF document.');
         $this->assertGreaterThan(
@@ -53,7 +53,7 @@ class CertificateGenerationTest extends TestCase
     {
         $class = $this->makeClass(null, ['name' => '7ST1']);
 
-        $pdf = app(NewCertificateService::class)->generateCertificate($class);
+        $pdf = app(CertificateService::class)->generateCertificate($class);
 
         $this->assertTrue(
             str_contains($pdf, '/FontFile2'),
@@ -79,7 +79,7 @@ class CertificateGenerationTest extends TestCase
         $class = $this->makeClass();
         $class->school->update(['name' => 'LYCÉE TECHNIQUE D\'ÉCHTERNACH']);
 
-        $pdf = app(NewCertificateService::class)->generateCertificate($class->fresh());
+        $pdf = app(CertificateService::class)->generateCertificate($class->fresh());
 
         $this->assertSame('%PDF-', substr($pdf, 0, 5));
         $this->assertGreaterThan(50000, strlen($pdf));

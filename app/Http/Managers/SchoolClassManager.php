@@ -7,7 +7,7 @@ namespace App\Http\Managers;
 use App\EditableDate;
 use App\EditableEmail;
 use App\Http\Repositories\EmailRepository;
-use App\Http\Services\NewCertificateService;
+use App\Http\Services\CertificateService;
 use App\Mail\CustomEmail;
 use App\SchoolClass;
 use Carbon\Carbon;
@@ -25,11 +25,11 @@ class SchoolClassManager
     private $emailRepository;
 
     /**
-     * @var NewCertificateService
+     * @var CertificateService
      */
     private $certificateService;
 
-    public function __construct(EmailRepository $emailRepository, NewCertificateService  $certificateService)
+    public function __construct(EmailRepository $emailRepository, CertificateService  $certificateService)
     {
         $this->emailRepository = $emailRepository;
         $this->certificateService = $certificateService;
