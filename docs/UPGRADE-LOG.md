@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 2/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 3/9 fait**
 
 ---
 
@@ -15,7 +15,7 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **6.20.45** | 13.x |
+| Laravel | **7.30.7** | 13.x |
 | PHP (application) | **7.4.33** | 8.5 |
 | PHP (résolution composer) | `config.platform.php` = **7.4.33** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
@@ -58,8 +58,8 @@ le PHP par défaut de la machine est 8.5, sur lequel Laravel 5.x ne démarre pas
 |---|---|---|---|
 | 1 | 5.7.29 → **5.8.38** | 7.4 | ✅ |
 | 2 | 5.8 → **6.20.45** | 7.4 | ✅ |
-| 3 | 6.0 → 7.0 | 7.4 | ⏭️ suivant |
-| 4 | 7.0 → 8.0 | 7.4 | — |
+| 3 | 6.0 → **7.30.7** | 7.4 | ✅ |
+| 4 | 7.0 → 8.0 | 7.4 | ⏭️ suivant |
 | 5 | 8.0 → 9.0 | **8.0.2** | — |
 | 6 | 9.0 → 10.0 | **8.1** | — |
 | 7 | 10.0 → 11.0 | **8.2** | — |
@@ -209,6 +209,36 @@ tolérance — qui l'a attrapé. Trois tests en échec, cause unique.
 ### D-13 · `filp/whoops` → `facade/ignition`
 **Hop 2.** Laravel 6 remplace whoops par ignition comme page d'erreur. `filp/whoops`
 retiré, `facade/ignition ^1.4` ajouté en dev.
+
+### D-14 · Gestionnaire d'exceptions typé sur `Throwable`
+**Hop 3.** Symfony 5, dont dépend Laravel 7, a élargi la signature parente :
+`report(Throwable $e)` et `render($request, Throwable $e)`. `App\Exceptions\Handler`
+typait `Exception` et faisait **planter le boot** — panne bruyante, immédiate, sans risque
+de passer inaperçue. Retypé.
+
+### D-15 · `laravel/ui` ajouté
+**Hop 3.** Laravel 7 sort les traits d'authentification du framework. Les **cinq**
+contrôleurs de `Auth/` en dépendent : `AuthenticatesUsers`, `RegistersUsers`,
+`ResetsPasswords`, `SendsPasswordResetEmails`, `VerifiesEmails`.
+
+Deux options : réinstaller `laravel/ui`, ou internaliser les traits. **Paquet retenu** —
+internaliser signifiait recopier ~400 lignes de code framework dans une application qui
+n'a aucune couverture de test sur l'authentification. `laravel/ui` couvre toute l'échelle :
+v2.5 (L7), v3.4 (L8/9), v4.6 (`^9.21|^10|^11|^12|^13`). **À monter à chaque hop.**
+
+### D-16 · Sérialisation des dates en ISO-8601 — sans effet ici
+**Hop 3.** `toArray()`/`toJson()` émettent désormais `2021-08-03T09:45:00.000000Z` au lieu
+de `2021-08-03 09:45:00`. Audité avant le bump : les cinq usages de `toJson()` sont
+**uniquement dans des messages de log ou d'exception**, aucune réponse API, aucun `@json()`
+en vue, aucune sérialisation vers du JS. **Aucune surcharge de `serializeDate()` nécessaire**
+— seul le format des lignes de log change.
+
+> **Correction au plan de migration.** Il annonçait qu'en Laravel 7 les commandes artisan
+> *devaient* retourner un entier depuis `handle()`. **C'est faux** : la valeur de retour
+> sert de code de sortie, `null` valant 0. Vérifié — les 13 commandes fonctionnent
+> inchangées et sortent en 0. Douze d'entre elles ne retournent rien ; rendre les codes de
+> sortie explicites reste souhaitable pour du cron, mais c'est une amélioration, pas une
+> exigence du hop.
 
 ---
 
