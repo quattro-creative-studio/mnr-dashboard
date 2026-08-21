@@ -28,7 +28,7 @@ class EditableDate extends Model {
 
     protected $keyType = 'string';
 
-    protected $dates = ['value'];
+    protected $casts = ['value' => 'datetime'];
 
     const TEACHER_INSCRIPTION_START = "TEACHER_INSCRIPTION_START";
     const TEACHER_INSCRIPTION_END = "TEACHER_INSCRIPTION_END";

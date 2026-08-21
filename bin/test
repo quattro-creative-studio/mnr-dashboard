@@ -14,7 +14,7 @@
 #
 set -euo pipefail
 
-PHP_BIN="${MNR_PHP:-php80}"
+PHP_BIN="${MNR_PHP:-php81}"
 HERD_BIN="$HOME/Library/Application Support/Herd/bin/$PHP_BIN"
 
 if [ -x "$HERD_BIN" ]; then

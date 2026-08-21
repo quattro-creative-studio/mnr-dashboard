@@ -60,8 +60,17 @@ class SchoolClass extends Model {
         'march_sent_at', 'march_reminder_sent_at', 'may_token', 'may_sent_at', 'may_reminder_sent_at', 'status_party',
         'party_token', 'party_sent_at', 'party_reminder_sent_at', 'party_group_reminder_sent_at'];
 
-    protected $dates = ['january_sent_at', 'january_reminder_sent_at', 'march_sent_at', 'march_reminder_sent_at',
-        'may_sent_at', 'may_reminder_sent_at', 'party_sent_at', 'party_reminder_sent_at', 'party_group_reminder_sent_at'];
+    protected $casts = [
+        'january_sent_at' => 'datetime',
+        'january_reminder_sent_at' => 'datetime',
+        'march_sent_at' => 'datetime',
+        'march_reminder_sent_at' => 'datetime',
+        'may_sent_at' => 'datetime',
+        'may_reminder_sent_at' => 'datetime',
+        'party_sent_at' => 'datetime',
+        'party_reminder_sent_at' => 'datetime',
+        'party_group_reminder_sent_at' => 'datetime',
+    ];
 
     public const STATUS_JANUARY = "january";
     public const STATUS_MARCH = "march";

@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 5/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 6/9 fait**
 
 ---
 
@@ -15,12 +15,12 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **9.52.22** | 13.x |
-| PHP (application) | **8.0.30** | 8.5 |
-| PHP (résolution composer) | `config.platform.php` = **8.0.2** | 8.3+ |
+| Laravel | **10.50.3** | 13.x |
+| PHP (application) | **8.1.34** | 8.5 |
+| PHP (résolution composer) | `config.platform.php` = **8.1.0** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **59 tests / 147 assertions — verte** | — |
+| Suite de tests | **60 tests / 149 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -28,10 +28,10 @@
 ```bash
 git checkout upgrade/phase-0
 composer test                 # passe par bin/test, qui épingle le binaire PHP
-MNR_PHP=php81 composer test   # pour changer de version PHP après un bump
+MNR_PHP=php82 composer test   # pour changer de version PHP après un bump
 ```
 
-`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php80`**) parce que
+`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php81`**) parce que
 le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 
 ---
@@ -61,8 +61,8 @@ le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 | 3 | 6.0 → **7.30.7** | 7.4 | ✅ |
 | 4 | 7.0 → **8.83.29** | 7.4 | ✅ |
 | 5 | 8.0 → **9.52.22** | **8.0.30** | ✅ |
-| 6 | 9.0 → 10.0 | **8.1** | ⏭️ suivant |
-| 7 | 10.0 → 11.0 | **8.2** | — |
+| 6 | 9.0 → **10.50.3** | **8.1.34** | ✅ |
+| 7 | 10.0 → 11.0 | **8.2** | ⏭️ suivant |
 | 8 | 11.0 → 12.0 | 8.2 | — |
 | 9 | 12.0 → 13.0 | **8.3 → 8.5** | — |
 
@@ -343,6 +343,48 @@ SwiftMailer désinstallé.
 
 ### D-25 · `facade/ignition` → `spatie/laravel-ignition`
 **Hop 5.** Le paquet a changé de mainteneur et de nom en Laravel 9.
+
+### D-26 · `protected $dates` → `$casts`
+**Hop 6.** Supprimé en Laravel 10. Quatre modèles : `SchoolClass` (9 colonnes), `Quiz` (2),
+`EditableDate` (1), `QuizResponse` (1). Aucun `$casts` préexistant, donc conversion sans
+conflit.
+
+Converti **avant** le bump : `$casts` avec `'datetime'` fonctionne déjà en Laravel 9, donc
+la suite a validé le changement isolément au lieu de le noyer dans le saut de version.
+
+### D-27 · `isCurrentDay()` est une méthode magique — garde-fou posé
+**Hop 6.** Trouvé en vérifiant que `EditableDate::find()` renvoyait toujours un Carbon après
+la conversion. `method_exists()` renvoie **`false`** sur `isCurrentDay()` : Carbon résout
+toute la famille `is<Unité>()` dynamiquement via `__call`. Aucune analyse statique ne la voit.
+
+Or **neuf portes de dates en dépendent** (`MailController` ×8, `NewsletterController` ×1) —
+c'est littéralement ce qui décide si le calendrier email se déclenche. **Carbon 3 devient
+obligatoire au hop 8.** Si la résolution magique disparaissait, plus aucun mail programmé ne
+partirait et **le seul symptôme serait le silence**.
+
+`MailDateGateTest::testCarbonStillResolvesIsCurrentDayDynamically` l'assertionne
+directement, avec un message qui nomme sa propre cause.
+
+### D-28 · PHPUnit 9 → 10, schéma de configuration migré
+**Hop 6.** `--migrate-configuration` a réécrit `phpunit.xml` au schéma 10.5 et retiré
+`convertErrorsToExceptions` / `convertNoticesToExceptions` / `convertWarningsToExceptions`,
+supprimés en PHPUnit 10.
+
+**Vérifié après coup** : les huit surcharges d'environnement ont survécu, notamment
+`DB_DATABASE=missionnichtrauchendb_test` et `MAIL_DRIVER=array` — ce sont elles qui
+empêchent d'effacer la base de dev et d'envoyer de vrais mails. `.phpunit.cache` ajouté au
+`.gitignore`.
+
+### D-29 · Piège rencontré : `composer.lock` avancé sans installation
+**Hop 6.** Le `composer update` a dépassé le délai d'exécution et a été basculé en arrière-plan ;
+il a **écrit le lock puis a été interrompu avant d'installer**. Résultat : lock en 10.50.3,
+`vendor/` resté en 9.52.22 — et **une suite verte qui testait encore Laravel 9**.
+
+Faux positif exactement du type qui fait croire qu'un hop est passé alors qu'il ne l'est pas.
+
+> **Règle adoptée pour la suite** : après chaque bump, comparer `vendor/composer/installed.json`
+> à `composer.lock` paquet par paquet, et ne jamais se fier au seul code de sortie. Le contrôle
+> tient en une commande et vaut mieux qu'un doute.
 
 ---
 

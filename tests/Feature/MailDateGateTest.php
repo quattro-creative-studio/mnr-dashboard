@@ -50,6 +50,33 @@ class MailDateGateTest extends TestCase
         return app(MailController::class);
     }
 
+    /**
+     * The entire email calendar gates on Carbon::isCurrentDay(), at nine call
+     * sites across MailController and NewsletterController. It is NOT a real
+     * method -- Carbon resolves the whole is<Unit>() family dynamically through
+     * __call, so method_exists() reports false and static analysis cannot see it.
+     *
+     * Carbon 2 arrived at Laravel 6 and Carbon 3 becomes mandatory at Laravel 12.
+     * If either drops the magic resolution, every scheduled mail stops firing and
+     * the only symptom is silence -- teachers simply never hear from the contest.
+     * Assert it directly so that failure names its own cause.
+     */
+    public function testCarbonStillResolvesIsCurrentDayDynamically()
+    {
+        $date = Carbon::parse('2026-05-10 08:00:00');
+
+        Carbon::setTestNow(Carbon::parse('2026-05-10 23:59:59'));
+        $this->assertTrue(
+            $date->isCurrentDay(),
+            'Carbon::isCurrentDay() no longer resolves. It is a magic __call method, '
+            .'and nine date gates in MailController and NewsletterController depend on '
+            .'it. Without it no scheduled mail fires at all.'
+        );
+
+        Carbon::setTestNow(Carbon::parse('2026-05-11 00:00:01'));
+        $this->assertFalse($date->isCurrentDay());
+    }
+
     public function testNothingIsSentOnADayThatIsNotTheConfiguredDay()
     {
         Mail::fake();
