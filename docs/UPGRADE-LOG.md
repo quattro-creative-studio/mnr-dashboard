@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0`
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · hop 1/9 fait
 
 ---
 
@@ -18,7 +18,7 @@
 | Laravel | **5.8.38** | 13.x |
 | PHP (application) | **7.4.33** | 8.5 |
 | PHP (résolution composer) | `config.platform.php` = **7.4.33** | 8.3+ |
-| Base de données | MySQL 8.0.33 (dev) · **5.7.31 (prod)** | 8.4 LTS |
+| Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
 | Suite de tests | **57 tests / 141 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
@@ -49,7 +49,7 @@ le PHP par défaut de la machine est 8.5, sur lequel Laravel 5.x ne démarre pas
 | 5 | Routes cachables + doublons supprimés | ✅ |
 | 6 | Transport mail neutre (SMTP) | ✅ |
 | 7 | Séparation bulk / transactionnel | ⏸️ voir §5 |
-| 8 | Audit du schéma vs MySQL 8.4 | ✅ dev · ⏳ diff prod |
+| 8 | Audit du schéma vs MySQL 8.4 | ✅ dev **et prod** |
 | 9 | Découpler les non-contrôleurs de `Controller` | ✅ |
 
 ### Échelle des versions
@@ -166,6 +166,22 @@ Audit du schéma de dev (déjà en MySQL 8.0.33) : 24 tables toutes InnoDB, coll
 des PK/uniques** (donc `restrict_fk_on_non_standard_key` n'a rien à rejeter), aucune date
 zéro, aucun `FLOAT(M,D)`.
 
+**Schéma de production vérifié le 21 août 2026** — le dernier risque base de données est
+levé. Le dump de structure de production a été chargé dans une base neuve et comparé à une
+base construite uniquement par les 66 migrations :
+
+| | Production | Migrations | Écarts |
+|---|---|---|---|
+| Tables | 24 | 24 | **0** |
+| Colonnes | 166 | 166 | **0** |
+| Index | 44 | 44 | **0** |
+| Clés étrangères | 19 | 19 | **0** |
+
+Comparaison portant sur les types, la nullabilité, les valeurs par défaut, `EXTRA`, les
+collations, la composition et l'unicité des index, et les règles `ON UPDATE`/`ON DELETE`.
+**Aucun `ALTER` manuel n'a jamais divergé** : les migrations sont bien la seule source de
+vérité du schéma. La structure de production passe par ailleurs tous les contrôles 8.4.
+
 ### D-11 · Vite écarté, Laravel Mix conservé
 **Phase 0.** La contrainte réelle n'est pas « Mix ou Vite » mais : **le bundle doit se
 charger en script classique, synchrone, avant les blocs `@stack('js')`**. `@vite` émet
@@ -205,17 +221,12 @@ plafond 200/jour sur le gratuit), MailPace (UE, zéro tracking).
 `newsletter_encouragement`, `new_educational_tool`, `end_year_communication_email`) et un
 drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinataire).
 
-**Diff de schéma prod.** L'audit MySQL porte sur la base de dev. La prod (5.7.31, née en
-2018) a pu dériver par des `ALTER` manuels. À comparer avec une base fraîchement migrée
-avant la bascule. **C'est le seul risque base de données restant.**
-
 ---
 
 ## 6. À faire avant la production
 
 - [ ] Remettre `config.policy.advisories.block` à `true` · `composer audit` propre (**D-01**)
 - [ ] Pointer le `.env` de production vers un hôte SMTP (**D-04**)
-- [ ] Diff de schéma prod vs base fraîchement migrée
 - [ ] Millésime du certificat codé en dur dans `NewCertificateService::generateCertificate()`
 - [ ] `MNR_MIN_QUIZ_RESPONSES` conforme au nombre de quiz de l'édition
 - [ ] Transférer `storage/app/certificats/` et `storage/app/documents/`
