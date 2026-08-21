@@ -20,7 +20,7 @@
 | PHP (résolution composer) | `config.platform.php` = **8.5.0** ✅ | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **71 tests / 165 assertions — verte** | — |
+| Suite de tests | **76 tests / 175 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -505,6 +505,39 @@ données réelles — classes, enseignants, quiz, réponses, groupes de fête �
 concours vide et le contrôle d'accès administrateur. Sans ça, les 9 conversions n'auraient
 été que compilées, jamais exécutées.
 
+### D-41 · tFPDF → `fpdf/fpdf` — rendu identique au pixel près
+**Après l'échelle.** `setasign/tfpdf` était mort (dernière version décembre 2022) et portait
+**7 signatures à nullable implicite** plus **6 appels `utf8_encode()`** — supprimé en PHP 9.
+
+Le remplacement était quasi gratuit parce que **l'application n'utilisait pas l'Unicode de
+tFPDF** : `NewCertificateService::conv()` convertit en `windows-1252` et charge des
+définitions MakeFont, donc elle pilotait déjà tFPDF **en mode FPDF classique**.
+`fpdf/fpdf` était d'ailleurs **déjà installé** et déjà utilisé par l'ancien
+`CertificateService`.
+
+Polices régénérées en JSON avec l'utilitaire `makefont` fourni — `_loadphpfont()` déclenche
+un `E_USER_DEPRECATED` par police chargée. **Le TTF d'origine n'était pas nécessaire** : la
+fonction `ConvertToJSON()` transforme les définitions `.php` existantes. Les fichiers `.z`
+restent requis, le JSON les référence.
+
+**Vérification, pas supposition.** Un certificat de référence a été produit avant migration,
+un autre après, puis comparés :
+
+| Contrôle | Résultat |
+|---|---|
+| Texte extrait (`pdftotext`) | **identique** |
+| Rendu PNG 150 dpi (`ghostscript`) | **identique octet pour octet** — 734 351 o |
+| Différence binaire | **5 octets**, uniquement `/Producer` |
+
+`CertificateGenerationTest` couvre désormais ce chemin : production du PDF, police et fond
+JPEG effectivement embarqués, noms d'école accentués, écriture sur disque via
+`SchoolClassManager`, et non-génération sans quiz répondu.
+
+Au passage : `SchoolClassManager` documentait `@var CertificateService` alors qu'il injecte
+`NewCertificateService` — corrigé. L'ancien `CertificateService` est **du code mort**
+(référencé nulle part) ; ses polices sont passées en JSON et son statut est documenté, mais
+**il n'a pas été supprimé** — c'est une décision à prendre, pas un effet de bord.
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -539,7 +572,7 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 ## 6. À faire avant la production
 
 - [ ] Pointer le `.env` de production vers un hôte SMTP (**D-04**)
-- [ ] Millésime du certificat codé en dur dans `NewCertificateService::generateCertificate()`
+- [ ] Millésime du certificat codé en dur (`'2024'`/`'2025'`) dans `NewCertificateService::generateCertificate()` — et choisir le bon fond parmi `public/images/pdf/*-certificate-bg.jpg`
 - [ ] `MNR_MIN_QUIZ_RESPONSES` conforme au nombre de quiz de l'édition
 - [ ] Transférer `storage/app/certificats/` et `storage/app/documents/`
 - [ ] `APP_KEY` **copiée, jamais régénérée**

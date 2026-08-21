@@ -12,12 +12,11 @@
         "ext-json": "*",
         "ext-redis": "*",
         "bugsnag/bugsnag-laravel": "^2.0",
-        "fpdf/fpdf": "^1.81",
+        "fpdf/fpdf": "^1.90",
         "laravel/framework": "^13.0",
         "laravel/ui": "^4.6",
         "laravel/tinker": "^3.0",
-        "phpoffice/phpspreadsheet": "^5.9",
-        "setasign/tfpdf": "1.32"
+        "phpoffice/phpspreadsheet": "^5.9"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.7",

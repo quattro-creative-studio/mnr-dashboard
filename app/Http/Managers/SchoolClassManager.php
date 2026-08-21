@@ -25,7 +25,7 @@ class SchoolClassManager
     private $emailRepository;
 
     /**
-     * @var CertificateService
+     * @var NewCertificateService
      */
     private $certificateService;
 

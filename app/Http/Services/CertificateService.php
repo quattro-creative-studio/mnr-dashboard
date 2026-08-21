@@ -5,6 +5,10 @@ namespace App\Http\Services;
 use App\SchoolClass;
 use Fpdf\Fpdf;
 
+/**
+ * Superseded by NewCertificateService, which is what SchoolClassManager injects.
+ * Kept as the record of the previous certificate design; nothing calls it.
+ */
 class CertificateService {
 
     private $fontSizeSmall = 18;
@@ -23,8 +27,8 @@ class CertificateService {
     private function createPdf(): Fpdf {
         $pdf = new Fpdf('L');
         $pdf->AddPage();
-        $pdf->AddFont('Calibri','', 'Calibri.php');
-        $pdf->AddFont('Calibri','B', 'CALIBRIB.php');
+        $pdf->AddFont('Calibri', '', 'Calibri.json');
+        $pdf->AddFont('Calibri', 'B', 'CALIBRIB.json');
         return $pdf;
     }
 

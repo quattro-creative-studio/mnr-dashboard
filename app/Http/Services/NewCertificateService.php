@@ -3,7 +3,7 @@
 namespace App\Http\Services;
 
 use App\SchoolClass;
-use tFPDF;
+use Fpdf\Fpdf;
 
 class NewCertificateService {
 
@@ -17,12 +17,15 @@ class NewCertificateService {
 
     /**
      * Initializes PDF Object
-     * @return tFPDF
+     * @return Fpdf
      */
-    private function createPdf(): tFpdf {
-        $pdf = new tFpdf('L');
+    private function createPdf(): Fpdf {
+        $pdf = new Fpdf('L');
         $pdf->AddPage();
-        $pdf->AddFont('RockwellBold','B', 'rockweb.php');
+        // .json, not .php: FPDF 1.9 still loads the legacy PHP definitions but
+        // triggers E_USER_DEPRECATED for each one. Converted with the bundled
+        // makefont utility, which does not need the original TTF.
+        $pdf->AddFont('RockwellBold', 'B', 'rockweb.json');
         return $pdf;
     }
 
@@ -59,12 +62,12 @@ class NewCertificateService {
 
     /**
      * Adds a line to pdf using specified style and position
-     * @param tFpdf $pdf pdf to render onto
+     * @param Fpdf $pdf pdf to render onto
      * @param string $text text to display
      * @param int $pos line number, can be float
      * @param string $style empty: default, 'B': Bold and large
      */
-    private function line(tFpdf $pdf, string $text, $pos = 1, string $style = '') {
+    private function line(Fpdf $pdf, string $text, $pos = 1, string $style = '') {
 
         $pdf->SetFont('RockwellBold', 'B', $this->fontSizeLarge);
 
