@@ -20,7 +20,7 @@
 | PHP (résolution composer) | `config.platform.php` = **8.0.2** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **58 tests / 146 assertions — verte** | — |
+| Suite de tests | **59 tests / 147 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -320,9 +320,20 @@ valeur en propriété.
 même valeur que l'ancienne constante. C'est une équivalence, pas un élargissement —
 `X_FORWARDED_PREFIX` reste exclu. **La confiance aux proxies est inchangée par ce hop.**
 
-> ⚠️ `$proxies = '*'` est conservé tel quel pour ne rien changer pendant la montée. **Doit
-> devenir `null` sur Forge** — sinon n'importe quel client peut falsifier son IP via
-> `X-Forwarded-For`. Voir la checklist §6.
+**`$proxies` passé de `'*'` à `null`** dans la foulée, pour ne pas reporter la question
+jusqu'à la bascule. `'*'` fait confiance à tout en-tête `X-Forwarded-*` reçu ; ce n'était
+tolérable que parce que le conteneur est injoignable autrement que par nginx en loopback,
+ce qui cesse d'être vrai sur Forge.
+
+`null` est le défaut du squelette Laravel et le bon réglage pour un site Forge standard :
+nginx y est le serveur web parlant à PHP-FPM sur socket local, pas un reverse proxy devant
+un autre, et il transmet le schéma par `fastcgi_param` plutôt que par un en-tête. Le
+framework traite par ailleurs `*.on-forge.com` en cas particulier et y fait confiance à
+l'IP appelante — **le domaine de préproduction Forge continue donc de fonctionner**.
+
+Vérifié : avec `null`, un `X-Forwarded-For: 203.0.113.9` forgé est ignoré et l'application
+voit l'IP réelle. `RouteIntegrityTest::testTheApplicationDoesNotTrustEveryProxy` empêche
+tout retour à `'*'`. Si un CDN est ajouté un jour, y déclarer **ses plages publiées**.
 
 ### D-24 · Swift Mailer → Symfony Mailer : sans effet
 **Hop 5.** Audité avant le bump : les cinq Mailables n'utilisent que `from`, `replyTo`,
@@ -373,6 +384,6 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 - [ ] Transférer `storage/app/certificats/` et `storage/app/documents/`
 - [ ] `APP_KEY` **copiée, jamais régénérée**
 - [ ] Worker de queue + scheduler actifs (sans worker, **aucun mail ne part**)
-- [ ] Ne pas reporter `'proxies' => '*'` sur Forge
+- [ ] Vérifier que les URL générées sont bien en `https://` (schéma transmis par `fastcgi_param`, pas par en-tête proxy)
 - [ ] Bascule dans la fenêtre d'été, entre le mail de fin d'année et l'ouverture des
       inscriptions

@@ -66,6 +66,34 @@ class RouteIntegrityTest extends TestCase
         );
     }
 
+    /**
+     * Guard: never trust every proxy again.
+     *
+     * '*' tells the framework to trust whatever X-Forwarded-* headers arrive,
+     * so any client can forge its own IP address or change the scheme used to
+     * build URLs. It was tolerable only while the application container was
+     * unreachable except through nginx on loopback, and that stops being true
+     * on Forge.
+     *
+     * A standard Forge site needs no proxy trust at all; the framework already
+     * special-cases *.on-forge.com. If a CDN is ever added, trust its published
+     * ranges here -- an explicit list passes this test, a wildcard does not.
+     */
+    public function testTheApplicationDoesNotTrustEveryProxy()
+    {
+        $property = new \ReflectionProperty(\App\Http\Middleware\TrustProxies::class, 'proxies');
+        $property->setAccessible(true);
+        $proxies = $property->getValue(new \App\Http\Middleware\TrustProxies());
+
+        $this->assertNotContains(
+            $proxies,
+            ['*', '**'],
+            'TrustProxies trusts every proxy. Any client can then spoof X-Forwarded-For '
+            .'to forge its IP, or X-Forwarded-Proto to influence generated URLs. List the '
+            .'CDN or load balancer ranges explicitly instead.'
+        );
+    }
+
     public function testThePublicTokenRoutesAreStillRegistered()
     {
         // Unauthenticated, secured only by an unguessable token in the URL.
