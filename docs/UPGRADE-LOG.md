@@ -20,7 +20,7 @@
 | PHP (résolution composer) | `config.platform.php` = **8.5.0** ✅ | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) · **site local en PHP 8.5** | Ubuntu 26.04 + Forge |
-| Suite de tests | **88 tests / 206 assertions — verte** | — |
+| Suite de tests | **88 tests / 209 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -636,6 +636,44 @@ ce test les trouve pour toujours.
 des données absentes en local). TinyMCE, DataTables, le datepicker et l'aperçu en direct des
 emails fonctionnent tous à l'écran.
 
+### D-45 · B-01 corrigé · les liens de certificat renvoient 404
+**Après la passe navigateur.** Les deux routes de certificat sont publiques, atteintes par un
+uid non devinable envoyé par mail, et **déréférençaient `->first()` sans garde**.
+
+Deux façons ordinaires de n'avoir rien à servir, toutes deux en 500 auparavant : un uid
+inconnu (lien mal recopié, périmé, régénéré) ; et une ligne dont le PDF a disparu — les
+certificats sont régénérés entre éditions et l'ancien répertoire supprimé avec eux, donc un
+lien ancien pointe vers une ligne existante et un fichier absent. `Storage::download()` lève
+alors, puisqu'il lit la taille pour `Content-Length`.
+
+`firstOrFail()` pour la ligne, `abort_unless(Storage::exists(...))` pour le fichier.
+
+### D-46 · B-02 corrigé · un rejeu ne perd plus le reste du lot
+**Après la passe navigateur.** `Api\QuizController` faisait `return` au lieu de `continue`
+sur un code déjà enregistré — alors que la ligne de log juste au-dessus dit *« skipping it »*,
+ce qui était manifestement l'intention.
+
+La conséquence est précise : **quiz-maker rejoue une livraison en entier**, donc la tentative
+censée récupérer un résultat perdu était elle-même garantie de **perdre tout ce qui suivait le
+premier code déjà connu**. Rien ne le signalait : l'endpoint répond toujours un 200 vide.
+
+> Corriger le contrôleur tenait en un mot. Prouver la correction a pris plus longtemps, et la
+> raison mérite d'être notée : **c'est la fixture qui était fausse, pas l'application**. Elle
+> créait un **second** `QuizInLanguage` pour le même `quiz_maker_id`, alors que le contrôleur
+> le résout par un unique `->first()` — le second code était donc inatteignable et le test
+> échouait pour une raison étrangère au correctif. La forme réelle est **un enregistrement par
+> langue portant plusieurs codes**, un par classe participante.
+
+### D-47 · Un seul `CertificateService`
+**Après la passe navigateur.** Il y en avait deux, dont un mort depuis des années :
+`SchoolClassManager` injectait `NewCertificateService`, et rien ne référençait l'ancien hors
+sa propre déclaration et un docblock périmé qui nommait le mauvais.
+
+L'ancien est supprimé, le survivant prend le nom simple — le préfixe « New » ne veut plus rien
+dire dès que l'autre disparaît. Sept fichiers de police partent avec lui : Calibri et CALIBRIB
+n'existaient que pour lui, et les définitions `.php` sont supersédées par les `.json`, que
+FPDF 1.9 déprécie à chaque chargement. Restent `rockweb.json` et son `rockweb.z`.
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -645,9 +683,9 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 
 | # | Défaut | Où | Note |
 |---|---|---|---|
-| B-01 | Un uid de certificat inconnu renvoie **500 au lieu de 404**, sur une route publique non authentifiée. `->first()` déréférencé sans garde. | `CertificateController::downloadCertificate()` | `CertificateDownloadTest`. Chemin le plus exposé au passage Flysystem 3. |
+| ~~B-01~~ | **Corrigé** — voir D-45. | | |
+| ~~B-02~~ | **Corrigé** — voir D-46. | | |
 | ~~B-03~~ | **Corrigé au hop 2** — voir D-12. | | |
-| B-02 | Le webhook fait **`return` et non `continue`** sur un code déjà enregistré : un rejeu contenant un résultat connu **abandonne tous les suivants**. | `Api\QuizController` | `QuizMakerWebhookTest`. Vrai bug, correctif à prévoir après la migration. |
 
 ---
 
