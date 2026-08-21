@@ -32,7 +32,7 @@ trait BuildsDomainFixtures
      */
     protected function makeTeacher(array $userAttributes = [], int $salutationId = 1): Teacher
     {
-        $user = factory(User::class)->create($userAttributes);
+        $user = User::factory()->create($userAttributes);
 
         $teacher = $user->teacher;
         $teacher->salutation_id = $salutationId;
@@ -45,7 +45,7 @@ trait BuildsDomainFixtures
     {
         $teacher = $teacher ?: $this->makeTeacher();
 
-        return factory(SchoolClass::class)->create(array_merge([
+        return SchoolClass::factory()->create(array_merge([
             'teacher_id' => $teacher->id,
         ], $attributes));
     }

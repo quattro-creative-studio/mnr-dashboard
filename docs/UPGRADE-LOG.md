@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 3/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 4/9 fait**
 
 ---
 
@@ -15,12 +15,12 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **7.30.7** | 13.x |
+| Laravel | **8.83.29** | 13.x |
 | PHP (application) | **7.4.33** | 8.5 |
 | PHP (résolution composer) | `config.platform.php` = **7.4.33** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **57 tests / 141 assertions — verte** | — |
+| Suite de tests | **57 tests / 145 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -59,8 +59,8 @@ le PHP par défaut de la machine est 8.5, sur lequel Laravel 5.x ne démarre pas
 | 1 | 5.7.29 → **5.8.38** | 7.4 | ✅ |
 | 2 | 5.8 → **6.20.45** | 7.4 | ✅ |
 | 3 | 6.0 → **7.30.7** | 7.4 | ✅ |
-| 4 | 7.0 → 8.0 | 7.4 | ⏭️ suivant |
-| 5 | 8.0 → 9.0 | **8.0.2** | — |
+| 4 | 7.0 → **8.83.29** | 7.4 | ✅ |
+| 5 | 8.0 → 9.0 | **8.0.2** | ⏭️ suivant |
 | 6 | 9.0 → 10.0 | **8.1** | — |
 | 7 | 10.0 → 11.0 | **8.2** | — |
 | 8 | 11.0 → 12.0 | 8.2 | — |
@@ -239,6 +239,46 @@ en vue, aucune sérialisation vers du JS. **Aucune surcharge de `serializeDate()
 > inchangées et sortent en 0. Douze d'entre elles ne retournent rien ; rendre les codes de
 > sortie explicites reste souhaitable pour du cron, mais c'est une amélioration, pas une
 > exigence du hop.
+
+### D-17 · Les 91 routes en syntaxe chaîne conservées
+**Hop 4.** Laravel 8 ne met `$namespace` à `null` que dans les **nouvelles** applications.
+En conservant `protected $namespace = 'App\Http\Controllers'` et les
+`->namespace($this->namespace)` de `RouteServiceProvider`, **`routes/web.php` n'a pas
+changé d'une ligne**. Vérifié après le bump : 90 routes résolues, 0 non résolue.
+
+### D-18 · Seeders et factories migrés plutôt que compatibilisés
+**Hop 4.** Deux échappatoires existaient — `laravel/legacy-factories` et le maintien du
+`classmap`. Écartées : il n'y avait que **3 définitions de factory et 5 usages**, donc
+migrer proprement coûtait moins cher que porter un paquet de transition jusqu'à la 13.
+
+- `database/seeds` → `database/seeders`, namespace `Database\Seeders`
+- `autoload` : `classmap` → **PSR-4** (`Database\Factories\`, `Database\Seeders\`)
+- 3 factories de classe (`SchoolClassFactory`, `TeacherFactory`, `UserFactory`),
+  `HasFactory` sur les trois modèles, `factory(X::class)` → `X::factory()`
+
+Bénéfice inattendu : l'ancienne `UserFactory` créait un `Teacher` **en dur dans sa
+définition**, donc tout appel qui surchargeait `teacher_id` laissait un orphelin derrière
+lui. La version en classe utilise `Teacher::factory()` en relation. Vérifié sur base
+vierge : 20 utilisateurs → **exactement 20 enseignants**.
+
+### D-19 · Colonne `uuid` ajoutée à `failed_jobs`
+**Hop 4.** La table datait de 2018 ; Laravel 8 y a ajouté `uuid` et s'en sert pour
+adresser un job précis avec `queue:retry`. **Tout le mail de cette application est mis en
+file**, donc `failed_jobs` est l'endroit où atterrissent les échecs d'envoi — c'est la
+table qu'on consulte quand un enseignant dit n'avoir rien reçu. Migration ajoutée.
+
+### D-20 · Test de mot de passe : de la syntaxe au comportement
+**Hop 4.** Laravel 8 remplace la chaîne `'min:8'` par un objet
+`Rules\Password::defaults()`. Le test interrogeait la syntaxe des règles et s'est cassé.
+
+Réécrit pour interroger le **comportement** : sept caractères refusés, huit acceptés, via
+le `Validator`. Laravel a exprimé ce minimum successivement en `min:6`, `min:8` puis en
+objet — les trois signifient la même chose pour un enseignant, et seul le comportement
+survit au prochain changement de représentation.
+
+> Note : `Password::defaults()` sans configuration vaut `Password::min(8)`. Le déclarer
+> explicitement dans `AppServiceProvider` le rendrait visible et permettrait d'ajouter des
+> règles de complexité. Amélioration possible, non faite.
 
 ---
 

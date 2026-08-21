@@ -36,12 +36,12 @@ class MailTransportTest extends TestCase
     {
         $example = file_get_contents(base_path('.env.example'));
 
-        $this->assertNotRegExp(
+        $this->assertDoesNotMatchRegularExpression(
             '/^MAIL_DRIVER\s*=\s*sparkpost/mi',
             $example,
             '.env.example still tells a new deployment to use a driver Laravel 6 deletes.'
         );
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '/^MAIL_DRIVER\s*=\s*smtp/mi',
             $example,
             '.env.example should point new deployments at SMTP.'

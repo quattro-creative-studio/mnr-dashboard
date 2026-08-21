@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Auth\ResetPasswordController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Validator;
 use ReflectionMethod;
 use Tests\Concerns\BuildsDomainFixtures;
 use Tests\TestCase;
@@ -21,6 +22,11 @@ use Tests\TestCase;
  * profile update still accept them because those rules are explicit. The two
  * paths silently disagree after the hop.
  *
+ * UPDATED at the 8.0 hop: Laravel 8 replaced the hardcoded 'min:8' string with
+ * a Rules\Password::defaults() object, so this now asserts BEHAVIOUR -- seven
+ * characters refused, eight accepted -- rather than rule syntax. That survives
+ * whatever representation the framework picks next.
+ *
  * DECIDED at the 5.8 hop: the application's own rules were aligned UP to
  * min:8 rather than forcing the framework back down to 6. Six characters is
  * weak, and the alternative would have kept a real defect -- registration
@@ -33,6 +39,21 @@ class PasswordRulesTest extends TestCase
 {
     use RefreshDatabase, BuildsDomainFixtures;
 
+    /**
+     * Run a candidate password through a rule set and report whether it passes.
+     * Asserting behaviour rather than rule syntax: Laravel has expressed this
+     * minimum as 'min:6', then 'min:8', and from 8.0 as a Rules\Password object.
+     * All three mean the same thing to a teacher, and only behaviour survives
+     * the next change of representation.
+     */
+    private function passes(array $rules, string $field, string $password): bool
+    {
+        return Validator::make(
+            [$field => $password, $field.'_confirmation' => $password],
+            [$field => $rules[$field]]
+        )->passes();
+    }
+
     private function resetRules(): array
     {
         $method = new ReflectionMethod(ResetPasswordController::class, 'rules');
@@ -41,16 +62,15 @@ class PasswordRulesTest extends TestCase
         return $method->invoke(app(ResetPasswordController::class));
     }
 
-    public function testTheFrameworkResetRuleMinimumIsEight()
+    public function testPasswordResetRejectsSevenCharactersAndAcceptsEight()
     {
-        $this->assertContains(
-            'min:8',
-            explode('|', $this->resetRules()['password']),
-            'The framework reset rule changed again. Re-check the application rules match.'
-        );
+        $rules = $this->resetRules();
+
+        $this->assertFalse($this->passes($rules, 'password', 'abcdefg'));
+        $this->assertTrue($this->passes($rules, 'password', 'abcdefgh'));
     }
 
-    public function testTheApplicationsOwnRulesMatchTheFrameworkMinimum()
+    public function testTheApplicationsOwnRulesAgreeWithTheResetPath()
     {
         // ProfileUpdateRequest::rules() builds a unique:users rule from the
         // authenticated user, so it needs a session to be readable at all.
@@ -65,12 +85,14 @@ class PasswordRulesTest extends TestCase
         foreach ($explicit as $class => $field) {
             $rules = (new $class)->rules();
 
-            $this->assertContains(
-                'min:8',
-                explode('|', $rules[$field]),
-                "{$class} sets a different minimum for {$field} than the password reset "
-                ."path does. The two must agree, or a teacher can register with a password "
-                ."they cannot later reset to."
+            $this->assertFalse(
+                $this->passes($rules, $field, 'abcdefg'),
+                "{$class} accepts a 7 character password that the reset path refuses. "
+                ."A teacher could register with a password they cannot later reset to."
+            );
+            $this->assertTrue(
+                $this->passes($rules, $field, 'abcdefgh'),
+                "{$class} refuses 8 characters, which the reset path accepts."
             );
         }
     }

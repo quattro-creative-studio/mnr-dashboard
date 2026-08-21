@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -51,6 +53,8 @@ use Ramsey\Uuid\Uuid;
  */
 class SchoolClass extends Model {
 
+
+    use HasFactory;
     protected $fillable = ['name', 'students', 'school_id', 'teacher_id', 'status_january', 'status_march',
         'status_may', 'status_party', 'january_token', 'january_sent_at', 'january_reminder_sent_at', 'march_token',
         'march_sent_at', 'march_reminder_sent_at', 'may_token', 'may_sent_at', 'may_reminder_sent_at', 'status_party',

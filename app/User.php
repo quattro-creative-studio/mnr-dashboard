@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 use App\Mail\ResetPasswordMail;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +31,8 @@ use Session;
  * @method static User create(array $valueMap)
  */
 class User extends Authenticatable {
+
+    use HasFactory;
     use Notifiable;
 
     public const TYPE_ADMIN = "admin";

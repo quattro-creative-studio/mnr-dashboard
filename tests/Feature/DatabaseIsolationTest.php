@@ -28,7 +28,7 @@ class DatabaseIsolationTest extends TestCase
             $database,
             'Tests are pointed at the development database.'
         );
-        $this->assertRegExp('/_test$/', $database);
+        $this->assertMatchesRegularExpression('/_test$/', $database);
     }
 
     public function testMigrationsRanAgainstTheTestDatabase()

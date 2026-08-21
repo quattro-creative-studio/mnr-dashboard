@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +30,8 @@ use Illuminate\Support\Collection;
  */
 class Teacher extends Model {
 
+
+    use HasFactory;
     protected $fillable = ['first_name', 'last_name', 'phone', 'salutation_id'];
 
     protected $appends = ['full_name', 'has_multiple_classes', 'has_multiple_schools'];

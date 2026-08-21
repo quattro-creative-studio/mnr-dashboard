@@ -15,31 +15,29 @@
         "doctrine/dbal": "^2.9",
         "fideloper/proxy": "^4.0",
         "fpdf/fpdf": "^1.81",
-        "laravel/framework": "^7.0",
-        "laravel/ui": "^2.0",
-        "laravel/tinker": "^2.0",
+        "laravel/framework": "^8.0",
+        "laravel/ui": "^3.0",
+        "laravel/tinker": "^2.5",
         "phpoffice/phpspreadsheet": "^1.1",
         "setasign/tfpdf": "1.32"
     },
     "require-dev": {
         "beyondcode/laravel-dump-server": "^1.0",
-        "barryvdh/laravel-ide-helper": "^2.8",
-        "facade/ignition": "^2.0",
-        "fzaninotto/faker": "^1.9.1",
+        "barryvdh/laravel-ide-helper": "^2.9",
+        "facade/ignition": "^2.3.6",
+        "fakerphp/faker": "^1.9.1",
         "mockery/mockery": "^1.0",
-        "nunomaduro/collision": "^4.1",
-        "phpunit/phpunit": "^8.0"
+        "nunomaduro/collision": "^5.0",
+        "phpunit/phpunit": "^9.3"
     },
     "autoload": {
         "files": [
             "app/helpers.php"
         ],
-        "classmap": [
-            "database/seeds",
-            "database/factories"
-        ],
         "psr-4": {
-            "App\\": "app/"
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {
