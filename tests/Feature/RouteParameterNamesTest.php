@@ -137,6 +137,29 @@ class RouteParameterNamesTest extends TestCase
         $this->assertStringContainsString($certificate->uid, $html);
     }
 
+    /**
+     * A positional route() argument can be null, which static analysis cannot
+     * see. admin/certificates.blade.php passed $class->certificate straight into
+     * route() for every row while already computing $cert to grey the button
+     * out -- so a single class without a certificate took the whole page down.
+     * With five classes and four certificates locally, it did.
+     */
+    public function testTheCertificatesPageRendersWhenAClassHasNoCertificate()
+    {
+        $withCertificate = $this->makeClass();
+        Certificate::create([
+            'school_class_id' => $withCertificate->id,
+            'url' => 'certificats/x/certificat.pdf',
+            'uid' => Uuid::uuid4()->toString(),
+        ]);
+
+        $this->makeClass();   // deliberately without one
+
+        $admin = \App\User::factory()->create(['type' => \App\User::TYPE_ADMIN]);
+
+        $this->actingAs($admin)->get('/admin/certificates')->assertStatus(200);
+    }
+
     public function testThePublicCertificatePagesRespond()
     {
         $class = $this->makeClass();
