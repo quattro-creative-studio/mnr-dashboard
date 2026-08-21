@@ -20,7 +20,7 @@
 | PHP (résolution composer) | `config.platform.php` = **8.5.0** ✅ | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **76 tests / 175 assertions — verte** | — |
+| Suite de tests | **79 tests / 193 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -537,6 +537,50 @@ Au passage : `SchoolClassManager` documentait `@var CertificateService` alors qu
 `NewCertificateService` — corrigé. L'ancien `CertificateService` est **du code mort**
 (référencé nulle part) ; ses polices sont passées en JSON et son statut est documenté, mais
 **il n'a pas été supprimé** — c'est une décision à prendre, pas un effet de bord.
+
+### D-42 · Laravel Mix 4 → 6, Node 16 → 22
+**Après l'échelle.** Ce n'était **pas** un chantier optionnel : `public/.gitignore` — un
+second fichier, à l'intérieur de `public/` — exclut `js/app.js`, `css/*` et
+`mix-manifest.json`. **Les assets compilés ne sont pas dans le dépôt**, donc le déploiement
+doit les construire. Or Mix 4 / webpack 4 ne tourne pas sur Node ≥ 17, et un serveur Forge
+neuf a du Node moderne : sans cette montée, `npm run prod` échoue à la bascule.
+
+Les deux épingles nécessaires, identifiées par la recherche préalable :
+`webpack` figé à **5.106.2** (bug Mix #3413 — webpack ≥ 5.107 a déplacé
+`webpack/lib/SizeFormatHelpers`) et un override **`webpackbar@^7`** (#3410). Sans elles une
+installation neuve de Mix 6 échoue, indépendamment de Node.
+
+Les scripts `package.json` passent au CLI `mix` : les anciens invoquaient webpack
+directement avec `--hide-modules` et `--progress`, **deux options supprimées du CLI de
+webpack 5**. `cross-env` disparaît (Mix gère `NODE_ENV`, et le paquet est archivé).
+
+Retirés au passage, tous vérifiés sans usage : **`axios`** (assigné à `window`, jamais
+appelé, **24 avis publiés** à la version épinglée `0.18`), **`vue-template-compiler`** et
+`resources/js/components/` (Vue n'était jamais instancié). Correctifs de sécurité :
+jQuery 3.3.1 → 3.7.1 (CVE‑2020‑11022/11023), lodash → 4.17.21, **Bootstrap 4.1.3 → 4.6.2**
+(CVE‑2019‑8331). **Bootstrap reste en 4** — la 5 est un chantier séparé d'environ 180
+occurrences sur 54 fichiers Blade.
+
+**TinyMCE reste volontairement en 5.10.9.** La montée en v8 est une **décision de licence**
+(GPLv2+ à partir de la v7), pas une décision d'outillage — elle n'a pas sa place dans ce
+commit. Voir §5.
+
+Vérifié après build : le bundle expose `window.$`, `window.jQuery`, `window._`,
+`window.Popper`, TinyMCE, DataTables et le datepicker ; **c'est un IIFE classique, pas un
+module ES** ; les 7 URL de polices du CSS résolvent toutes ; les skins TinyMCE de
+`public/js/skins` sont intacts.
+
+### D-43 · `layouts/frontend` n'invalidait pas le cache — corrigé
+**Après l'échelle.** Trouvé en vérifiant le build. Trois layouts utilisaient `mix()`, mais
+**`layouts/frontend` utilisait `asset()`** — donc les pages **publiques** (connexion, suivi,
+réponse fête, téléchargement de certificat) servaient des URL sans empreinte de contenu,
+**sans aucune invalidation de cache**.
+
+Anodin tant que le bundle ne bougeait pas ; nettement moins au moment précis où il vient de
+changer de fond en comble. Un visiteur revenant avec l'ancien CSS aurait vu une page cassée.
+Les quatre layouts sont désormais cohérents, et `AssetPipelineTest` verrouille les deux
+propriétés : versionnement par `mix()` partout, et **absence de `type="module"`** — la
+contrainte qui interdit Vite (voir D-11).
 
 ---
 
