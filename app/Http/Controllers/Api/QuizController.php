@@ -49,7 +49,10 @@ class QuizController extends Controller {
             ], [
                 'quizmaker_response_id' => $res->id,
                 'score' => $res->score,
-                'responded_at' => Carbon::createFromTimestampMs($res->times->end),
+                // Timezone stated explicitly. Carbon 3 changed createFromTimestampMs()
+                // to default to UTC, where Carbon 2 used the application timezone --
+                // so this silently started writing responded_at an hour out.
+                'responded_at' => Carbon::createFromTimestampMs($res->times->end, config('app.timezone')),
             ]);
         }
 

@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 6/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 7/9 fait**
 
 ---
 
@@ -15,12 +15,12 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **10.50.3** | 13.x |
-| PHP (application) | **8.1.34** | 8.5 |
-| PHP (résolution composer) | `config.platform.php` = **8.1.0** | 8.3+ |
+| Laravel | **11.56.0** | 13.x |
+| PHP (application) | **8.2.32** | 8.5 |
+| PHP (résolution composer) | `config.platform.php` = **8.2.0** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **60 tests / 149 assertions — verte** | — |
+| Suite de tests | **64 tests / 156 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -28,10 +28,10 @@
 ```bash
 git checkout upgrade/phase-0
 composer test                 # passe par bin/test, qui épingle le binaire PHP
-MNR_PHP=php82 composer test   # pour changer de version PHP après un bump
+MNR_PHP=php83 composer test   # pour changer de version PHP après un bump
 ```
 
-`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php81`**) parce que
+`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php82`**) parce que
 le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 
 ---
@@ -62,8 +62,8 @@ le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 | 4 | 7.0 → **8.83.29** | 7.4 | ✅ |
 | 5 | 8.0 → **9.52.22** | **8.0.30** | ✅ |
 | 6 | 9.0 → **10.50.3** | **8.1.34** | ✅ |
-| 7 | 10.0 → 11.0 | **8.2** | ⏭️ suivant |
-| 8 | 11.0 → 12.0 | 8.2 | — |
+| 7 | 10.0 → **11.56.0** | **8.2.32** | ✅ |
+| 8 | 11.0 → 12.0 | 8.2 | ⏭️ suivant |
 | 9 | 12.0 → 13.0 | **8.3 → 8.5** | — |
 
 ---
@@ -385,6 +385,63 @@ Faux positif exactement du type qui fait croire qu'un hop est passé alors qu'il
 > **Règle adoptée pour la suite** : après chaque bump, comparer `vendor/composer/installed.json`
 > à `composer.lock` paquet par paquet, et ne jamais se fier au seul code de sortie. Le contrôle
 > tient en une commande et vaut mieux qu'un doute.
+
+### D-30 · Carbon 3 : décalage horaire sur deux chemins — **corrigé**
+**Hop 7.** Carbon 3 arrive avec Laravel 11 et change `createFromTimestamp()` /
+`createFromTimestampMs()` pour **défaut UTC**, là où Carbon 2 utilisait le fuseau de
+l'application. Trois sites d'appel, deux conséquences distinctes.
+
+`Api\QuizController` écrivait `responded_at` **une heure en arrière** (deux en été).
+`QuizMakerWebhookTest` l'a attrapé — c'est le test qui a fait rougir la suite.
+
+**Le plus grave n'avait aucune couverture.** `Admin\QuizController` fixe `closes_at` de la
+même manière, et `quiz:update` tourne **chaque minute** en comparant `closes_at` à
+`CURRENT_TIMESTAMP` côté MySQL. Un admin saisissant `18:00` aurait vu **`17:00` stocké** —
+`16:00` en heure d'été — et **le quiz aurait fermé une à deux heures trop tôt**, sans
+erreur, sans log. Les enseignants auraient simplement perdu l'accès en avance.
+
+Les trois sites déclarent désormais le fuseau explicitement. `QuizClosingTimeTest` couvre
+le chemin non testé, avec une marge de 30 minutes choisie pour qu'un décalage d'une heure
+inverse le résultat.
+
+### D-31 · `beyondcode/laravel-dump-server` supprimé
+**Hop 7.** Il plafonnait à `illuminate/support ^10.0` et **bloquait le hop à lui seul**.
+Jamais référencé dans le code, en `require-dev`, et même sa dernière version plafonne à
+Laravel 12 — il aurait rebloqué au hop 9. Son mainteneur renvoie vers **la fenêtre Dump de
+Herd**, déjà installée.
+
+> Le message d'erreur de Composer désignait un conflit entre `illuminate/support` et
+> `laravel/framework` « qui ne peuvent coexister », en listant cinquante versions écartées.
+> La cause réelle n'y figurait pas. `composer why illuminate/support` l'a donnée en une ligne.
+
+### D-32 · `doctrine/dbal` supprimé — `->change()` vérifié sur le schéma réel
+**Hop 7.** Laravel 11 gère `->change()` en SQL natif. Le plan qualifiait ça de sans risque
+« les migrations ont déjà été appliquées » — **faux ici** : la base du serveur neuf est
+construite par `artisan migrate`, donc **les 66 migrations s'exécutent réellement**, dont
+les deux qui utilisent `->change()` sans restater tous les modificateurs.
+
+Vérifié plutôt que supposé, en rejouant la comparaison de schéma : base construite par les
+migrations **sous Laravel 11 sans dbal**, diffée contre la structure de production.
+
+| | Production | Migrations L11 | Écart |
+|---|---|---|---|
+| Colonnes | 166 | 167 | `failed_jobs.uuid` (ajout volontaire, D-19) |
+| Index | 44 | 45 | son index unique |
+| Clés étrangères | 19 | 19 | **0** |
+
+**Aucun autre écart.** Les deux `->change()` produisent un schéma identique sans dbal.
+
+### D-33 · Structure d'application volontairement **non** migrée
+**Hop 7.** La doc Laravel déconseille explicitement la migration du squelette pour une
+application existante. `app/Http/Kernel.php`, `app/Console/Kernel.php`,
+`app/Exceptions/Handler.php`, `bootstrap/app.php` ancien format et les 13 fichiers de
+config sont **conservés tels quels**. C'est le plus gros coût que la plupart des plans
+s'infligent sans nécessité. `registerPolicies()` existe toujours et n'est pas déprécié en
+11.56.
+
+### D-34 · `guzzlehttp/guzzle` revenu tout seul
+**Hop 7.** Comme annoncé en D-08 : retiré des dépendances directes au hop 1, Laravel 11
+l'exige en dur et l'a réinstallé en **7.15.3**. Aucune intervention.
 
 ---
 
