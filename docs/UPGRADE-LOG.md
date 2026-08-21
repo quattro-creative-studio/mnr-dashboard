@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 7/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 8/9 fait**
 
 ---
 
@@ -15,12 +15,12 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **11.56.0** | 13.x |
+| Laravel | **12.67.0** | 13.x |
 | PHP (application) | **8.2.32** | 8.5 |
 | PHP (résolution composer) | `config.platform.php` = **8.2.0** | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **64 tests / 156 assertions — verte** | — |
+| Suite de tests | **67 tests / 160 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -63,8 +63,8 @@ le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 | 5 | 8.0 → **9.52.22** | **8.0.30** | ✅ |
 | 6 | 9.0 → **10.50.3** | **8.1.34** | ✅ |
 | 7 | 10.0 → **11.56.0** | **8.2.32** | ✅ |
-| 8 | 11.0 → 12.0 | 8.2 | ⏭️ suivant |
-| 9 | 12.0 → 13.0 | **8.3 → 8.5** | — |
+| 8 | 11.0 → **12.67.0** | 8.2.32 | ✅ |
+| 9 | 12.0 → 13.0 | **8.3 → 8.5** | ⏭️ suivant |
 
 ---
 
@@ -442,6 +442,26 @@ s'infligent sans nécessité. `registerPolicies()` existe toujours et n'est pas 
 ### D-34 · `guzzlehttp/guzzle` revenu tout seul
 **Hop 7.** Comme annoncé en D-08 : retiré des dépendances directes au hop 1, Laravel 11
 l'exige en dur et l'a réinstallé en **7.15.3**. Aucune intervention.
+
+### D-35 · Racine du disque `local` — garde-fou posé
+**Hop 8.** Laravel 12 déplace la racine **par défaut** du disque `local` de `storage/app`
+vers `storage/app/private`. L'application y échappe **uniquement** parce que
+`config/filesystems.php` déclare `'root' => storage_path('app')` explicitement.
+
+L'enjeu est concret : `certificates.url` contient des chemins **relatifs**
+(`certificats/{uuid}/certificat.pdf`), résolus contre cette racine. Si elle bougeait, les
+certificats et les documents enseignants deviendraient **introuvables d'un coup** — et ni
+les uns ni les autres ne sont régénérables.
+
+`StorageRootTest` verrouille les trois propriétés : racine, disque par défaut, et
+résolution effective des chemins. Vérifié après le bump : **7 certificats en base, 7
+fichiers présents.**
+
+### D-36 · Hop 12 sans incident
+**Hop 8.** Les quatre points du plan étaient déjà neutralisés : Carbon 3 en place depuis le
+hop 7, aucun appel `diffIn*`, aucun nom de route en double (Phase 0), et la racine du
+disque déclarée explicitement. Laravel estime ce hop à cinq minutes ; ici il n'a rien
+demandé d'autre que la montée de version.
 
 ---
 
