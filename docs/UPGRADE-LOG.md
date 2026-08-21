@@ -19,8 +19,8 @@
 | PHP (application) | **8.5.8** ✅ | 8.5 |
 | PHP (résolution composer) | `config.platform.php` = **8.5.0** ✅ | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
-| Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **79 tests / 193 assertions — verte** | — |
+| Serveur | actuel (Hetzner) · **site local en PHP 8.5** | Ubuntu 26.04 + Forge |
+| Suite de tests | **88 tests / 206 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -581,6 +581,60 @@ changer de fond en comble. Un visiteur revenant avec l'ancien CSS aurait vu une 
 Les quatre layouts sont désormais cohérents, et `AssetPipelineTest` verrouille les deux
 propriétés : versionnement par `mix()` partout, et **absence de `type="module"`** — la
 contrainte qui interdit Vite (voir D-11).
+
+### D-44 · Passe navigateur : quatre pannes qu'aucun test ne voyait
+**Après l'échelle.** Premier affichage réel d'un écran depuis Laravel 5.7. La suite comptait
+alors 79 tests **mais ne touchait que 3 des 68 routes GET** — toute la couche vue avait
+traversé huit versions majeures sans être exercée.
+
+Le site Herd était resté épinglé sur **PHP 7.4** et renvoyait 500 au contrôle de plateforme ;
+basculé sur 8.5. Au passage, `composer.json` déclarait `"php": "^8.3"` alors que le lock ne
+peut **pas** tourner sur 8.3 — les composants **Symfony 8 exigent ≥ 8.4.1**. Contrainte
+corrigée en `^8.4.1`.
+
+**1 · Carbon 3 refuse les dates nulles.** `EditableDate::find()` renvoie `null` pour une clé
+absente ; Carbon 2 l'acceptait en le traitant comme « maintenant », Carbon 3 lève une
+`TypeError`. **Treize sites d'appel** passaient `find()` directement dans une comparaison, et
+**12 des 23 clés déclarées étaient absentes de la base** — `/admin/classes` renvoyait 500 dès
+la connexion d'un administrateur.
+
+Le plus grave n'a pas encore mordu : **`isRegistrationOpen()` est appelé depuis
+`layouts/app-sidebar`**, la coquille de *toutes* les pages authentifiées. Perdre une des deux
+dates d'inscription ferait tomber **l'application entière, pour tout le monde**.
+
+Corrigé à la source par `EditableDate::hasPassed()`, qui répond `false` pour une date absente
+— un événement non configuré n'est pas atteint. **Changement délibéré** par rapport au `true`
+accidentel de Carbon 2, qui faisait apparaître un suivi non démarré comme commencé.
+
+> Constat séparé : un `artisan migrate` neuf ne crée que **10 des 23 clés**.
+> `TEACHER_INSCRIPTION_END` n'en fait pas partie — une base construite par les seules
+> migrations aurait les inscriptions fermées en permanence. La bascule importe les données de
+> production, donc ça ne mord pas là ; mais ça explique l'écart.
+
+**2 · Noms de paramètres de route, dans les vues cette fois.** Même défaut qu'au hop 2 (D-12),
+que l'audit précédent avait manqué **parce qu'il ne cherchait que dans le PHP**.
+`external/certificate-download.blade.php` passait `certificate`, et
+`emails/teacher-certificate.blade.php` passait `uid`, à des routes déclarant `{certificate_uid}`.
+
+Le second est dans le **modèle d'email du certificat** : son rendu levait, donc **l'envoi
+aurait échoué pour chaque classe éligible**, au moment de l'année qui compte le plus pour un
+enseignant.
+
+**3 · Argument positionnel nul.** `admin/certificates.blade.php` passait
+`[$class->certificate]` sur chaque ligne, alors qu'il calculait déjà `$cert` pour griser le
+bouton. Une seule classe sans certificat suffisait à faire tomber la page — et en début
+d'année de concours, presque toutes le sont.
+
+**4 · Vues formatant une date nulle** : `admin/classes.blade.php`, `admin/emails.blade.php` et
+`EditableEmail::getDatesStringAttribute()`.
+
+`RouteParameterNamesTest` compare désormais **chaque appel `route()` à clés nommées** contre la
+déclaration de sa route, sur `app/` **et** `resources/views/`. Un grep les trouve une fois ;
+ce test les trouve pour toujours.
+
+**Vérifié après correction : les 52 routes GET résolvables répondent** (les 16 autres exigent
+des données absentes en local). TinyMCE, DataTables, le datepicker et l'aperçu en direct des
+emails fonctionnent tous à l'écran.
 
 ---
 
