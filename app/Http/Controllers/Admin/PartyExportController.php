@@ -29,7 +29,11 @@ class PartyExportController extends Controller {
         $writer = new XlsxWriter($spreadsheet);
         \Storage::makeDirectory('export/party');
         $relPath = "export/party/fete-de-cloture-" . date('YmdHis') . ".xlsx";
-        $writer->save("../storage/app/$relPath");
+        // Storage::path() rather than a hardcoded "../storage/app/..." relative
+        // path: that only resolves correctly when the working directory is
+        // public/, which is true under php-fpm and false from the console, a
+        // queue worker, or a test -- where it would write outside the project.
+        $writer->save(\Storage::path($relPath));
         return \Storage::download($relPath);
     }
 

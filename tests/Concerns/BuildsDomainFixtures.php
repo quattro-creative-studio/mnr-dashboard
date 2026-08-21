@@ -41,7 +41,7 @@ trait BuildsDomainFixtures
         return $teacher->fresh();
     }
 
-    protected function makeClass(Teacher $teacher = null, array $attributes = []): SchoolClass
+    protected function makeClass(?Teacher $teacher = null, array $attributes = []): SchoolClass
     {
         $teacher = $teacher ?: $this->makeTeacher();
 

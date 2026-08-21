@@ -8,24 +8,24 @@
     "license": "MIT",
     "type": "project",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "ext-json": "*",
         "ext-redis": "*",
         "bugsnag/bugsnag-laravel": "^2.0",
         "fpdf/fpdf": "^1.81",
-        "laravel/framework": "^12.0",
+        "laravel/framework": "^13.0",
         "laravel/ui": "^4.6",
-        "laravel/tinker": "^2.10",
-        "phpoffice/phpspreadsheet": "^1.1",
+        "laravel/tinker": "^3.0",
+        "phpoffice/phpspreadsheet": "^5.9",
         "setasign/tfpdf": "1.32"
     },
     "require-dev": {
-        "barryvdh/laravel-ide-helper": "^3.0",
-        "fakerphp/faker": "^1.9.1",
+        "barryvdh/laravel-ide-helper": "^3.7",
+        "fakerphp/faker": "^1.24",
         "spatie/laravel-ignition": "^2.4",
         "mockery/mockery": "^1.0",
         "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^11.0"
+        "phpunit/phpunit": "^12.0"
     },
     "autoload": {
         "files": [
@@ -47,8 +47,7 @@
             "dont-discover": []
         },
         "upgrade-notes": {
-            "advisories-block": "TRANSITIONAL. config.policy.advisories.block is false only while climbing the Laravel 5.7 -> 13 ladder. Every end-of-life version in between, and its whole transitive tree, carries advisories; Composer 2.10 refuses to install them, so the climb is impossible with the block on. This is not a decision to tolerate vulnerabilities: production stays on 5.7 throughout and no intermediate version is ever deployed. For reference, 5.7.29 (production today) is affected by 9 laravel/framework advisories and 5.8.38 by 8, so each hop reduces exposure.",
-            "advisories-block-removal": "MUST be restored to true, and `composer audit` must be clean, before anything reaches production. Tests\\Feature\\AdvisoryPolicyTest fails the build if the installed framework reaches Laravel 13 while this is still false.",
+            "advisories-block": "RESTORED to true on 21 August 2026, at the Laravel 13 hop. It was false only while climbing from 5.7: every end-of-life version in between carries published advisories and Composer 2.10 refuses to install them, so the climb was impossible with the block on. No intermediate version was ever deployed. AdvisoryPolicyTest enforces that it stays true from Laravel 13 onward.",
             "platform-php": "config.platform.php pins the PHP version dependency resolution targets, independently of whichever PHP runs composer. Bump it at each PHP hop: 7.4.33 -> 8.0 -> 8.1 -> 8.2 -> 8.3+."
         }
     },
@@ -72,11 +71,11 @@
     },
     "config": {
         "platform": {
-            "php": "8.2.0"
+            "php": "8.5.0"
         },
         "policy": {
             "advisories": {
-                "block": false
+                "block": true
             }
         },
         "preferred-install": "dist",

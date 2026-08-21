@@ -7,7 +7,7 @@
 > Il est mis à jour **à la fin de chaque étape**. Si une session de travail est perdue,
 > ce fichier plus `git log` suffisent à reprendre.
 
-**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **hop 8/9 fait**
+**Dernière mise à jour :** 21 août 2026 · branche `upgrade/phase-0` · **ÉCHELLE TERMINÉE — 9/9**
 
 ---
 
@@ -15,12 +15,12 @@
 
 | | Aujourd'hui | Cible |
 |---|---|---|
-| Laravel | **12.67.0** | 13.x |
-| PHP (application) | **8.2.32** | 8.5 |
-| PHP (résolution composer) | `config.platform.php` = **8.2.0** | 8.3+ |
+| Laravel | **13.26.1** ✅ | 13.x |
+| PHP (application) | **8.5.8** ✅ | 8.5 |
+| PHP (résolution composer) | `config.platform.php` = **8.5.0** ✅ | 8.3+ |
 | Base de données | MySQL 8.0.33 (dev) · 5.7.31 (prod) — **schéma vérifié** | 8.4 LTS |
 | Serveur | actuel (Hetzner) | Ubuntu 26.04 + Forge |
-| Suite de tests | **67 tests / 160 assertions — verte** | — |
+| Suite de tests | **71 tests / 165 assertions — verte** | — |
 | Production | **toujours en 5.7.29 — rien n'a été déployé** | — |
 
 ### Reprendre le travail
@@ -28,10 +28,10 @@
 ```bash
 git checkout upgrade/phase-0
 composer test                 # passe par bin/test, qui épingle le binaire PHP
-MNR_PHP=php83 composer test   # pour changer de version PHP après un bump
+composer audit               # doit rester propre
 ```
 
-`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php82`**) parce que
+`bin/test` épingle la version PHP du hop en cours (`MNR_PHP`, défaut **`php85`**) parce que
 le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 
 ---
@@ -64,7 +64,7 @@ le PHP par défaut de la machine est 8.5, en avance sur le hop courant.
 | 6 | 9.0 → **10.50.3** | **8.1.34** | ✅ |
 | 7 | 10.0 → **11.56.0** | **8.2.32** | ✅ |
 | 8 | 11.0 → **12.67.0** | 8.2.32 | ✅ |
-| 9 | 12.0 → 13.0 | **8.3 → 8.5** | ⏭️ suivant |
+| 9 | 12.0 → **13.26.1** | **8.5.8** | ✅ |
 
 ---
 
@@ -85,9 +85,9 @@ aujourd'hui**.
 Ce qui rend la manœuvre sûre : **aucune version intermédiaire n'est déployée**, la
 production reste en 5.7 pendant toute la montée.
 
-> **À faire avant toute mise en production :** remettre `block` à `true`, lancer
-> `composer audit`, obtenir un résultat propre. `AdvisoryPolicyTest` fait échouer le
-> build si Laravel 13 est atteint avec le blocage encore désactivé.
+> ✅ **RÉSOLU au hop 9.** `block` est remis à `true` et **`composer audit` ne signale plus
+> rien**. `AdvisoryPolicyTest` a fait exactement son travail : il est passé au rouge à
+> l'arrivée en Laravel 13 et a refusé de laisser passer le blocage désactivé.
 
 ### D-02 · `config.platform.php` épinglé
 **Hop 1.** Composer tourne sous PHP 8.5 sur cette machine et ne peut pas résoudre un
@@ -463,6 +463,48 @@ hop 7, aucun appel `diffIn*`, aucun nom de route en double (Phase 0), et la raci
 disque déclarée explicitement. Laravel estime ce hop à cinq minutes ; ici il n'a rien
 demandé d'autre que la montée de version.
 
+### D-37 · Laravel 13 + PHP 8.5 — arrivée
+**Hop 9.** `VerifyCsrfToken` renommé `PreventRequestForgery` (l'ancien nom survit en alias
+**déprécié** — reparenté et renommé, plus aucune référence). tinker ^3.0, PHPUnit ^12.5.33.
+
+Les points redoutés par le plan ne s'appliquaient pas : **aucun `upsert()`**, **aucun objet
+mis en cache** (donc `cache.serializable_classes` sans effet), et surtout **aucune collision
+avec `array_first()`/`array_last()`** du polyfill PHP 8.5 — parce qu'on n'a jamais eu besoin
+du contournement `laravel/helpers` aux hops 2 à 4.
+
+Préfixes de cache et cookie de session **insensibles** au changement de séparateur du
+squelette : ils sont dérivés dans nos propres fichiers de config avec `'_'` explicite.
+Valeurs inchangées : `mission_nichtrauchen_cache`, `mission_nichtrauchen_session`.
+
+**Une dépréciation, de mon fait** : `makeClass(Teacher $teacher = null)` dans les fixtures —
+nullable implicite, déprécié en PHP 8.4. J'avais audité l'application pour exactement ça au
+départ et trouvé zéro ; j'en avais introduit un. Corrigé.
+
+### D-38 · `phpoffice/phpspreadsheet` 1.30 → 5.9 et ses 9 sites d'appel
+**Hop 9.** C'est `composer audit`, une fois le blocage réactivé, qui l'a imposé : **9 avis,
+un seul paquet**. Tout le reste de l'arbre Laravel 13 était déjà propre.
+
+PhpSpreadsheet 2.0 a supprimé toute la famille `*ByColumnAndRow()`. Les 9 sites étaient tous
+dans `ClassExportController`. **Rien de tout ça n'est visible pour un linter** : le code
+parse, et échoue seulement quand un administrateur demande son export.
+
+Convertis en coordonnées `[colonne, ligne]`, et en notation A1 via `Coordinate::stringFromColumnIndex()`
+pour les deux plages (filtre automatique, bordures de ligne).
+
+### D-39 · Chemin d'export codé en dur — corrigé
+**Hop 9.** Découvert en écrivant le test : les deux contrôleurs d'export mélangeaient la
+façade `Storage` et un chemin **relatif en dur**, `"../storage/app/$relPath"`.
+
+Ce chemin ne se résout correctement que si le répertoire courant est `public/` — vrai sous
+php-fpm, **faux depuis la console, un worker de queue ou un test**, où il écrirait *hors du
+projet*. Remplacé par `\Storage::path($relPath)` dans les deux contrôleurs.
+
+### D-40 · Les exports ont enfin une couverture
+**Hop 9.** `SpreadsheetExportTest` pilote les deux points d'entrée de bout en bout avec des
+données réelles — classes, enseignants, quiz, réponses, groupes de fête — plus le cas du
+concours vide et le contrôle d'accès administrateur. Sans ça, les 9 conversions n'auraient
+été que compilées, jamais exécutées.
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -496,7 +538,6 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 
 ## 6. À faire avant la production
 
-- [ ] Remettre `config.policy.advisories.block` à `true` · `composer audit` propre (**D-01**)
 - [ ] Pointer le `.env` de production vers un hôte SMTP (**D-04**)
 - [ ] Millésime du certificat codé en dur dans `NewCertificateService::generateCertificate()`
 - [ ] `MNR_MIN_QUIZ_RESPONSES` conforme au nombre de quiz de l'édition
