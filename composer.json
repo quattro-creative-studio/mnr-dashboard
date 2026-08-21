@@ -17,11 +17,9 @@
         "guzzlehttp/guzzle": "^6.3",
         "laravel/framework": "5.8.*",
         "laravel/tinker": "^1.0.",
-        "league/flysystem-sftp": "^1.0",
         "phpoffice/phpspreadsheet": "^1.1",
         "predis/predis": "^1.1",
-        "setasign/tfpdf": "1.32",
-        "spatie/laravel-backup": "^6.3"
+        "setasign/tfpdf": "1.32"
     },
     "require-dev": {
         "beyondcode/laravel-dump-server": "^1.0",
