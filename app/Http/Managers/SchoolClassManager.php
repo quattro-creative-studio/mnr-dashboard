@@ -89,6 +89,7 @@ class SchoolClassManager
         return $class->arePreviousStatusesPositive($whichStatus)
             && $sentAt === null
             && $statusValue === null
+            && $followupDate !== null
             && Carbon::now()->gte($followupDate);
     }
 
@@ -122,7 +123,9 @@ class SchoolClassManager
             $followupReminderDate = Carbon::create(2000, 1, 1, 0, 0, 0);
             $reminderSentAt = null;
         }
-        return $reminderSentAt === null && Carbon::now()->gte($followupReminderDate);
+        return $reminderSentAt === null
+            && $followupReminderDate !== null
+            && Carbon::now()->gte($followupReminderDate);
     }
 
     public function shouldSendPartyReminder(SchoolClass $class): bool
@@ -136,8 +139,7 @@ class SchoolClassManager
         if ($class->party_reminder_sent_at !== null)
             return false;
 
-        $reminderDate = EditableDate::find(EditableDate::INVITE_PARTY_REMINDER);
-        return Carbon::now()->gte($reminderDate);
+        return EditableDate::hasPassed(EditableDate::INVITE_PARTY_REMINDER);
     }
 
     public function shouldSendPartyGroupReminder(SchoolClass $class)
@@ -154,8 +156,7 @@ class SchoolClassManager
         if ($class->party_group_reminder_sent_at !== null)
             return false;
 
-        $reminderDate = EditableDate::find(EditableDate::PARTY_GROUP_REMINDER);
-        return Carbon::now()->gte($reminderDate);
+        return EditableDate::hasPassed(EditableDate::PARTY_GROUP_REMINDER);
     }
 
     /**

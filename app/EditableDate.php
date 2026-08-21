@@ -63,6 +63,27 @@ class EditableDate extends Model {
         return optional(static::query()->where('key', $key)->first())->value;
     }
 
+    /**
+     * Has the moment configured under this key already passed?
+     *
+     * find() returns null when the key is absent, and Carbon 3 rejects null:
+     * gte() is typed DateTimeInterface|string and raises a TypeError. Carbon 2
+     * silently treated null as "now", so every one of these comparisons used to
+     * return true for a missing date -- which is how an unconfigured follow-up
+     * ended up displayed as though it had started.
+     *
+     * An absent date means the event is not configured, so it has NOT been
+     * reached. That is a deliberate change from Carbon 2's accidental true.
+     *
+     * @param string $key One of the constants declared on this class.
+     * @return bool
+     */
+    public static function hasPassed($key): bool {
+        $date = static::find($key);
+
+        return $date !== null && Carbon::now()->gte($date);
+    }
+
     public function emails(): BelongsToMany {
         return $this->belongsToMany(EditableEmail::class);
     }

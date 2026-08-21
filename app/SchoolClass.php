@@ -258,13 +258,13 @@ class SchoolClass extends Model {
      * @return bool
      */
     public function isStillParticipating(): bool {
-        if (Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_3))) {
+        if (EditableDate::hasPassed(EditableDate::FOLLOW_UP_3)) {
             return $this->status_may === true;
         }
-//        if (Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_2))) {
+//        if (EditableDate::hasPassed(EditableDate::FOLLOW_UP_2)) {
 //            return $this->status_march === true;
 //        }
-//        if (Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_1))) {
+//        if (EditableDate::hasPassed(EditableDate::FOLLOW_UP_1)) {
 //            return $this->status_january === true;
 //        }
         return true;

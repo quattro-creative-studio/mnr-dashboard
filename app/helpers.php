@@ -41,6 +41,17 @@ function statusToIcon($status) {
 }
 
 function isRegistrationOpen() {
-    return \Carbon\Carbon::now()->gte(\App\EditableDate::find('TEACHER_INSCRIPTION_START'))
-        && \Carbon\Carbon::now()->lt(\App\EditableDate::find('TEACHER_INSCRIPTION_END'));
+    $start = \App\EditableDate::find(\App\EditableDate::TEACHER_INSCRIPTION_START);
+    $end = \App\EditableDate::find(\App\EditableDate::TEACHER_INSCRIPTION_END);
+
+    // Either bound missing means registration is not configured, so it is closed.
+    // Carbon 2 reached the same answer by accident -- gte(null) was true and
+    // lt(null) was false -- but Carbon 3 rejects null outright with a TypeError,
+    // and this helper is called from layouts/app-sidebar, the shell of every
+    // authenticated page. An absent date would have 500'd the entire application.
+    if ($start === null || $end === null) {
+        return false;
+    }
+
+    return \Carbon\Carbon::now()->gte($start) && \Carbon\Carbon::now()->lt($end);
 }

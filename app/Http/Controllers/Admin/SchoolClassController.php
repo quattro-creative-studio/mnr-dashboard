@@ -35,9 +35,9 @@ class SchoolClassController extends Controller {
         return view('admin.classes')->with([
             'quizzes' => Quiz::all(),
             'classes' => SchoolClass::all()->load('teacher'),
-            'show_january' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_1)),
-            'show_march' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_2)),
-            'show_may' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_3)),
+            'show_january' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_1),
+            'show_march' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_2),
+            'show_may' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_3),
         ]);
     }
 
@@ -46,10 +46,10 @@ class SchoolClassController extends Controller {
             'class' => $class,
             'schools' => School::all(),
             'teachers' => Teacher::all(),
-            'show_january' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_1)),
-            'show_march' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_2)),
-            'show_may' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_3)),
-            'show_party' => Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_3)),
+            'show_january' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_1),
+            'show_march' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_2),
+            'show_may' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_3),
+            'show_party' => EditableDate::hasPassed(EditableDate::FOLLOW_UP_3),
         ]);
     }
 
