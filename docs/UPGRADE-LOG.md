@@ -863,6 +863,35 @@ découpage.
 
 ---
 
+### D-53 · La checklist de pré-production devient une commande
+`php artisan deploy:check`. Tous les points de cette liste partagent une propriété : **quand
+ils sont faux, rien ne casse.** Le site sert ses pages, l'admin enregistre son mail, la queue
+accepte le job — et le courrier ne part jamais, ou part avec des liens que personne ne peut
+ouvrir. C'est exactement la catégorie de panne qu'une checklist humaine rate le mieux, parce
+qu'il n'y a rien à remarquer.
+
+Deux contrôles méritent d'être expliqués, car ils lisent des symptômes plutôt que d'ajouter
+de la machinerie :
+
+- **Worker vivant** — mesuré à l'âge du plus ancien job en attente. Rien dans cette
+  application n'envoie de mail directement, tout est `->queue()`. Pas de worker, pas de mail,
+  aucune erreur nulle part.
+- **Ordonnanceur vivant** — mesuré aux quiz dépassés et toujours `running`. `quiz:update`
+  tourne chaque minute ; un quiz resté ouvert est le seul symptôme qu'un ordonnanceur mort
+  produise de lui-même. Formulé honnêtement dans la sortie : *absence de symptôme, pas une
+  preuve*.
+
+`DeployCheckTest` casse un réglage à la fois depuis une base saine et exige que la commande
+le remarque — une vérification qui ne peut pas échouer n'en est pas une.
+
+**Trouvaille à l'exécution :** 9 jobs en attente depuis trois jours sur la machine locale,
+dont trois `SendElegibleClassesCertificateMail`. Avec `MNR_MIN_QUIZ_RESPONSES=0` en local,
+*toutes* les classes sont éligibles : au premier `queue:work`, ils écriraient à chaque
+enseignant de la base locale. Seul `MAIL_ALWAYS_TO` (D-48) les retient — ce qui valide la
+garde après coup.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -902,11 +931,47 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 
 ## 6. À faire avant la production
 
-- [ ] Pointer le `.env` de production vers un hôte SMTP (**D-04**)
-- [ ] `MNR_MIN_QUIZ_RESPONSES` conforme au nombre de quiz de l'édition
-- [ ] Transférer `storage/app/certificats/` et `storage/app/documents/`
-- [ ] `APP_KEY` **copiée, jamais régénérée**
-- [ ] Worker de queue + scheduler actifs (sans worker, **aucun mail ne part**)
-- [ ] Vérifier que les URL générées sont bien en `https://` (schéma transmis par `fastcgi_param`, pas par en-tête proxy)
+**`php artisan deploy:check` répond à la majorité de cette liste** (D-53). Sortie non nulle
+= ne pas livrer. À lancer après chaque déploiement, pas seulement à la bascule.
+
+Vérifié automatiquement :
+
+- [x] `APP_DEBUG` désactivé — sinon la moindre erreur affiche l'environnement entier,
+      identifiants de base et mot de passe mail compris
+- [x] `APP_KEY` présente
+- [x] `APP_URL` en `https://` et pas un domaine local
+- [x] Base connectée, migrations toutes appliquées
+- [x] Transport mail réel, identifiants complets, TLS exigé
+- [x] `MAIL_ALWAYS_TO` **non défini** — sinon tout le courrier du concours est détourné
+- [x] Worker de queue vivant (mesuré à l'âge du plus ancien job en attente)
+- [x] Ordonnanceur vivant (mesuré aux quiz dépassés et toujours ouverts)
+- [x] `storage/app/{certificats,documents,quiz-maker-hooks}` accessibles en écriture
+- [x] Driver de session ≠ `array`
+- [x] `MNR_MIN_QUIZ_RESPONSES` affiché (aucune valeur juste à imposer : elle doit
+      correspondre au nombre de quiz de l'édition)
+
+Restant manuel :
+
+- [ ] Transférer `storage/app/certificats/` (1,7 Mo en local) et `storage/app/documents/`
+- [ ] `APP_KEY` **copiée** depuis l'ancien serveur, jamais régénérée
 - [ ] Bascule dans la fenêtre d'été, entre le mail de fin d'année et l'ouverture des
       inscriptions
+
+### Trois affirmations de cette liste étaient fausses ou imprécises
+
+**Le schéma des liens ne vient pas de `fastcgi_param`.** C'était écrit ici, et c'est vrai
+uniquement pour les requêtes web. Or les mails sont construits par les **workers de queue**,
+qui n'ont aucune requête HTTP : `SetRequestForConsole` en fabrique une à partir de
+**`APP_URL`** au démarrage. Vérifié en variant `APP_URL` à l'exécution — c'est elle, et elle
+seule, qui décide du schéma de chaque lien certificat, fête et quiz envoyé par mail.
+`deploy:check` contrôle donc `APP_URL`, pas la configuration nginx.
+
+**Régénérer `APP_KEY` ne détruirait pas de données.** L'application ne chiffre rien qui lui
+soit propre : aucun `Crypt::`, aucun cast `encrypted`, aucune route signée — vérifié. Le coût
+se limite aux sessions et aux cookies, soit une déconnexion générale. À copier quand même,
+mais la conséquence était surestimée ici.
+
+**Tronquer `sessions` à l'import n'est pas nécessaire.** Le motif avancé — « Laravel 13
+sérialise en JSON » — est faux : `Session\Store::$serialization` vaut `'php'` par défaut et
+`config/session.php` ne le surcharge pas, exactement comme en 5.7. Tronquer reste anodin,
+mais un mauvais motif dans un runbook est un piège.
