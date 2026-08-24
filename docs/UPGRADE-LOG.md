@@ -792,6 +792,34 @@ la Fondation, pas ici.
 
 ---
 
+### D-51 · Une publicité s'était glissée dans l'éditeur — et TinyMCE 7 évalué
+**Régression introduite par D-50, repérée en évaluant la 7.** TinyMCE 6 ajoute un bouton
+promotionnel dans le châssis de l'éditeur — que la 7 rebaptise « Get all features » — et la
+5.10.9 ne l'avait pas. Vérifié dans le paquet : le balisage `tox-promotion` est absent de
+la 5.10.9 et présent à partir de la 6.8.6. Une publicité n'a pas sa place dans l'éditeur où
+la Fondation Cancer rédige son courrier ; `promotion: false` la coupe.
+
+Le branding « Powered by Tiny » est **laissé tel quel** : il était déjà là en 5.10.9, ce
+n'est donc pas une régression, et le retirer relève d'une autre discussion.
+
+**TinyMCE 7.9.3 évalué sur la branche `essai/tinymce-7-gpl`.** Elle n'est pas payante —
+GPL-2.0-or-later, gratuite, auto-hébergeable ; seule la 8 exige une clé achetée. Son
+attrait : **c'est la seule ligne sans avis de sécurité connu**, quand la 5.10.9 en porte 7
+et la 6.8.6 en porte 5 que personne ne corrigera plus.
+
+Techniquement, la migration 6 → 7 est **une ligne** : `license_key: 'gpl'`. Tous les points
+d'entrée et toutes les APIs utilisées survivent. Mesuré plutôt que supposé : avec la ligne,
+zéro avertissement ; sans elle, un avertissement console « evaluation mode ». **Contrairement
+à ce que laisse entendre la documentation, l'éditeur n'est pas désactivé sans elle** — il
+fonctionne dans les deux cas.
+
+Le blocage n'est donc pas technique. Mix concatène TinyMCE avec le JS applicatif dans un
+`app.js` unique servi au navigateur : la question de l'œuvre combinée sous GPLv2+ se pose
+réellement, et elle appartient à la Fondation. La branche est prête à être adoptée ou
+abandonnée d'un seul coup.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés

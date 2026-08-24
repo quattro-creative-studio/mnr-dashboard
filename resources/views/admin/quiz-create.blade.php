@@ -158,6 +158,11 @@
         });
         tinymce.init({
             selector: '#email_text',
+            // TinyMCE 6 added a promotional button inside the editor chrome that
+            // 5.10.9 never had. An advert has no place in the editor a cancer
+            // foundation writes its mail in. (Branding is left alone: it was
+            // already present in 5.10.9, so it is not a regression.)
+            promotion: false,
             height: 500,
             plugins: 'link',
             toolbar: 'undo redo | styles | bold italic | link | alignleft aligncenter alignright | placeholder',
