@@ -152,16 +152,23 @@
 @endsection
 
 @push('js')
+    <script src="{{ asset('vendor/tinymce/tinymce.min.js') }}"></script>
     <script>
         $('table').dataTable({
             pageLength: 100,
         });
         tinymce.init({
             selector: '#email_text',
-            // TinyMCE 6 added a promotional button inside the editor chrome that
-            // 5.10.9 never had. An advert has no place in the editor a cancer
-            // foundation writes its mail in. (Branding is left alone: it was
-            // already present in 5.10.9, so it is not a regression.)
+            // Required since TinyMCE 7: declares that this self-hosted copy is
+            // used under GPL-2.0-or-later. Measured rather than assumed -- the
+            // editor works without it, but logs an "evaluation mode" warning on
+            // every page load.
+            license_key: 'gpl',
+            // TinyMCE 6 added a promotional button inside the editor chrome
+            // ("Get all features" in 7) that 5.10.9 never had. An advert has no
+            // place in the editor a cancer foundation writes its mail in.
+            // (Branding is left alone: it was already present in 5.10.9, so it
+            // is not a regression.)
             promotion: false,
             height: 500,
             plugins: 'link',

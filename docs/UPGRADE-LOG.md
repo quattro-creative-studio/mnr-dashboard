@@ -813,10 +813,53 @@ zéro avertissement ; sans elle, un avertissement console « evaluation mode ».
 à ce que laisse entendre la documentation, l'éditeur n'est pas désactivé sans elle** — il
 fonctionne dans les deux cas.
 
-Le blocage n'est donc pas technique. Mix concatène TinyMCE avec le JS applicatif dans un
-`app.js` unique servi au navigateur : la question de l'œuvre combinée sous GPLv2+ se pose
-réellement, et elle appartient à la Fondation. La branche est prête à être adoptée ou
-abandonnée d'un seul coup.
+Le blocage n'était donc pas technique mais juridique — et **D-52 le supprime** : TinyMCE
+n'est plus concaténé au JS applicatif, la question de l'œuvre combinée ne se pose plus, et
+la 7.9.3 est retenue sur ses mérites.
+
+---
+
+### D-52 · TinyMCE servi à part plutôt qu'embarqué — et la 7.9.3 retenue
+**La piste chiffrée après la question GPL. Elle paie deux fois.**
+
+**Licence.** Mix concaténait TinyMCE avec le JS de l'application dans un `app.js` unique —
+c'est précisément ce qui rend l'argument « œuvre combinée » disponible à une licence
+copyleft. Copié tel quel dans `public/vendor/tinymce` et chargé par sa propre balise
+`<script>`, il relève de la simple agrégation : une bibliothèque non modifiée distribuée à
+côté de l'application, pas fondue dedans. La licence sort de l'équation, et la **7.9.3** —
+seule ligne sans avis de sécurité connu — devient choisissable sur ses mérites. C'est elle
+qui est retenue.
+
+**Poids, et c'était la surprise.** `app.js` est chargé par les **quatre** layouts — chaque
+page enseignant, chaque page publique à jeton, l'écran de connexion — alors que l'éditeur
+n'apparaît que sur **deux pages admin**. Mesuré gzippé, comme nginx le sert :
+
+| | avant | après |
+|---|---|---|
+| `app.js` (toutes les pages) | 464 Ko | **114 Ko** |
+| TinyMCE (2 pages admin) | — | ~371 Ko, puis en cache |
+
+**349 Ko économisés par page non-admin.** Chaque enseignant téléchargeait un éditeur de
+texte qu'il ne verrait jamais. Le build passe de 8,8 s à 3,8 s.
+
+Seul le nécessaire est copié : le paquet fait 10 Mo, presque entièrement des plugins et
+skins jamais chargés. `license.md` voyage avec — distribuer la bibliothèque, c'est
+distribuer sa licence. Aucun `base_url` requis : TinyMCE résout thème, modèle, plugin et
+skin depuis l'URL de son propre script (`baseURL` vérifié à `/vendor/tinymce`).
+
+**Une trouvaille au passage.** `app.scss` importait la feuille de contenu de TinyMCE, qui
+porte une règle `body` **non scopée**, servie sur toutes les pages du site. Elle n'était
+inerte que **par accident** — hoistée au-dessus du reboot Bootstrap, qui écrasait ses trois
+propriétés. Un simple changement d'ordre d'import l'aurait réveillée. Supprimée.
+
+**Correction consignée :** j'avais écrit que sans `license_key` la 7 désactive l'éditeur.
+C'est faux, et mesuré comme tel : sans la ligne, un avertissement console « evaluation
+mode » ; avec, zéro. L'éditeur fonctionne dans les deux cas. La ligne reste — c'est
+l'acceptation explicite des termes GPL — mais elle n'est pas indispensable au
+fonctionnement.
+
+Deux gardes ajoutées à `AssetPipelineTest`, **vérifiées en échec** quand on défait le
+découpage.
 
 ---
 

@@ -9,13 +9,17 @@ require('./bootstrap');
 import 'bootstrap-datepicker'
 import 'popper.js'
 
-import tinymce from 'tinymce/tinymce';
-import 'tinymce/icons/default';
-import 'tinymce/themes/silver';
-// New in TinyMCE 6: the DOM model is a separate entry point, and a
-// bundled build that omits it silently never initialises the editor.
-import 'tinymce/models/dom';
-import 'tinymce/plugins/link';
+// TinyMCE is deliberately NOT imported here. It is copied verbatim to
+// public/vendor/tinymce and loaded with its own <script> tag by the two admin
+// views that need it. Two reasons:
+//
+//   Licence. Bundling concatenates TinyMCE with this application's own code
+//   into a single file, which is what makes the "combined work" argument
+//   available to a copyleft licence. Served as a separate, unmodified file it
+//   is mere aggregation.
+//
+//   Weight. app.js is loaded by all four layouts -- every teacher page, every
+//   public token page -- while the editor is used on exactly two admin pages.
 
 require('datatables.net');
 require('datatables.net-bs4');
