@@ -712,6 +712,39 @@ le transport résolu et rend le refus SMTP tel quel (un 550 nomme un domaine non
 
 ---
 
+### D-49 · B-04 corrigé · `quiz:update` interrogeait l'horloge de MySQL
+**Découvert en relançant la suite après un redémarrage de MySQL.**
+`QuizClosingTimeTest` — le détecteur de dérive d'horloge écrit au hop Carbon 3 — est passé
+au rouge sans qu'une seule ligne du code quiz ait bougé. Il ne s'agissait pas d'un test
+instable : sur cette machine, PHP annonce 12:02 et MySQL 11:02.
+
+`quiz:update` comparait `closes_at` à `CURRENT_TIMESTAMP`, c'est-à-dire posait à l'horloge
+de la base une question sur une valeur écrite par l'horloge de PHP. `config/database.php`
+ne fixe aucun fuseau de session, MySQL hérite donc de `SYSTEM`. Les deux horloges ne
+s'accordaient que par accident — et sur un serveur Forge, MySQL tourne en UTC pendant que
+l'application tourne en `Europe/Luxembourg` : une heure d'écart en hiver, deux en été.
+
+La panne aurait été silencieuse. Un quiz qui se ferme à la mauvaise heure ressemble
+exactement à un quiz qui se ferme : pas d'erreur, pas de log, juste des enseignants qui
+perdent l'accès une heure trop tôt. C'est la commande la plus fréquente de l'application,
+ordonnancée **chaque minute**.
+
+Au passage, une contradiction interne : `Quiz::validate()` (`app/Quiz.php:70`) tranchait
+déjà la même question avec `now()` de PHP. Deux horloges décidaient de la même chose.
+`quiz:update` utilise désormais `now()` comme le reste.
+
+**Le test qui le fixe reproduit la condition déployée** plutôt que d'inspecter le source :
+il force `SET time_zone = '+05:00'` avant d'écrire le quiz, donc tout le scénario se déroule
+dans un cadre cohérent, comme une requête déployée. Vérifié en rétablissant l'ancienne
+implémentation : le test échoue bien, sur « closed early ».
+
+À noter pour la mise en production : `closes_at` est une colonne `TIMESTAMP`, que MySQL
+convertit via le fuseau de session à l'écriture comme à la lecture. Le correctif tient quel
+que soit ce fuseau, puisque les deux côtés de la comparaison passent désormais par la même
+conversion.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -724,6 +757,7 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 | ~~B-01~~ | **Corrigé** — voir D-45. | | |
 | ~~B-02~~ | **Corrigé** — voir D-46. | | |
 | ~~B-03~~ | **Corrigé au hop 2** — voir D-12. | | |
+| ~~B-04~~ | **Corrigé** — voir D-49. | | |
 
 ---
 

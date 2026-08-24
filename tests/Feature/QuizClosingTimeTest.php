@@ -83,6 +83,49 @@ class QuizClosingTimeTest extends TestCase
         $this->assertSame(Quiz::STATE_CLOSED, $quiz->fresh()->state);
     }
 
+    /**
+     * Reproduces the deployed condition: MySQL's clock disagrees with PHP's.
+     *
+     * config/database.php sets no session timezone, so MySQL inherits SYSTEM.
+     * On a Forge box that is UTC while this application runs
+     * Europe/Luxembourg -- an hour apart in winter, two in summer. The offset
+     * below is deliberately larger than any real one, and is set before the
+     * quiz is written so the whole scenario runs in a single, consistent
+     * frame, exactly as a deployed request does.
+     *
+     * quiz:update used to compare closes_at against CURRENT_TIMESTAMP, which
+     * asks the database's clock a question about a value PHP's clock wrote.
+     * Under this offset that comparison is wrong, and wrong in the silent
+     * direction: a quiz closing at the wrong hour looks just like a quiz
+     * closing.
+     */
+    public function testClosingDoesNotDependOnTheDatabaseServersClock()
+    {
+        \DB::statement("SET time_zone = '+05:00'");
+
+        try {
+            $overdue = $this->makeQuiz(Carbon::now()->subMinutes(30));
+            $upcoming = $this->makeQuiz(Carbon::now()->addMinutes(30));
+
+            $this->artisan('quiz:update')->assertExitCode(0);
+
+            $this->assertSame(
+                Quiz::STATE_CLOSED,
+                $overdue->fresh()->state,
+                'A quiz 30 minutes overdue stayed open because the database '
+                .'server keeps a different clock from the application.'
+            );
+            $this->assertSame(
+                Quiz::STATE_RUNNING,
+                $upcoming->fresh()->state,
+                'A quiz due in 30 minutes was closed early by the database '
+                .'server\'s clock.'
+            );
+        } finally {
+            \DB::statement("SET time_zone = SYSTEM");
+        }
+    }
+
     public function testOnlyRunningQuizzesAreClosed()
     {
         $new = $this->makeQuiz(Carbon::now()->subMinutes(30), Quiz::STATE_NEW);
