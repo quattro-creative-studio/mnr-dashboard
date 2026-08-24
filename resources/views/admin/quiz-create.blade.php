@@ -152,6 +152,7 @@
 @endsection
 
 @push('js')
+    <script src="{{ asset('vendor/tinymce/tinymce.min.js') }}"></script>
     <script>
         $('table').dataTable({
             pageLength: 100,

@@ -62,6 +62,7 @@
 @endsection
 
 @push('js')
+    <script src="{{ asset('vendor/tinymce/tinymce.min.js') }}"></script>
     <script>
         tinymce.init({
             selector: '#text',
