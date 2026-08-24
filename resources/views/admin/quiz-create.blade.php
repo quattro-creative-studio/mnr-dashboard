@@ -160,7 +160,7 @@
             selector: '#email_text',
             height: 500,
             plugins: 'link',
-            toolbar: 'undo redo | styleselect | bold italic | link | alignleft aligncenter alignright | placeholder',
+            toolbar: 'undo redo | styles | bold italic | link | alignleft aligncenter alignright | placeholder',
             setup: function (editor) {
                 editor.ui.registry.addSplitButton('placeholder', {
                     text: 'Texte réservé',

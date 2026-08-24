@@ -12,6 +12,9 @@ import 'popper.js'
 import tinymce from 'tinymce/tinymce';
 import 'tinymce/icons/default';
 import 'tinymce/themes/silver';
+// New in TinyMCE 6: the DOM model is a separate entry point, and a
+// bundled build that omits it silently never initialises the editor.
+import 'tinymce/models/dom';
 import 'tinymce/plugins/link';
 
 require('datatables.net');

@@ -745,6 +745,53 @@ conversion.
 
 ---
 
+### D-50 · TinyMCE 5.10.9 → 6.8.6 · la licence n'était pas le problème
+**Question posée : peut-on rester sur la version actuelle, faute de licence ?** La prémisse
+ne tient pas — aucune licence n'est nécessaire, ni maintenant ni pour monter.
+
+| Version | Licence | État |
+|---|---|---|
+| 5.10.9 | LGPL-2.1 | dernière 5.x publique, non corrigée |
+| 5.11.0 | *absente de npm* | correctif des CVE 2024 — **LTS commerciale uniquement** |
+| **6.8.6** | **MIT** | dernière 6.x, retenue |
+| 7.9.3 | GPL-2.0-or-later | copyleft |
+| 8.8.2 | `SEE LICENSE IN license.md` | clé de licence requise |
+
+TinyMCE 6 est **MIT depuis la 6.0** — plus permissive que la LGPL actuelle. Le vrai piège
+était ailleurs : le correctif des CVE-2024-38356/38357 pour la ligne 5.x est sorti en
+**5.11.0 LTS, qui n'existe pas sur npm**. La 5.10.9 est donc définitivement non corrigée.
+
+**Ce n'est pas pour autant une victoire nette côté sécurité, et il faut le dire.** Mesuré
+dans les mêmes conditions : 5.10.9 → 7 avis (3 high), 6.8.6 → 5 avis (4 high), 7.9.3 → aucun.
+Les jeux ne se recouvrent pas : monter en 6.8.6 en retire sept et en introduit quatre propres
+à la ligne 6. Le gain réel est la **licence** (LGPL → MIT), la sortie d'une version morte dont
+le correctif est derrière un paywall, et le fait que 6.x est le passage obligé vers 7 ou 8.
+
+**Exposition réelle : faible.** L'éditeur est derrière le middleware `admin`, et le contenu
+édité est celui que les admins écrivent eux-mêmes — aucun contenu d'enseignant ou du public
+n'y entre. Les avis exigent tous du HTML hostile chargé *dans* l'éditeur. Vérifié en outre :
+le plugin `media` n'est pas embarqué (seul `link` l'est), ce qui écarte GHSA-vg35-5wq7-3x7w,
+et `noneditable_regexp` n'est utilisé nulle part, ce qui écartait déjà CVE-2024-38356.
+
+**Deux ruptures 5→6, vérifiées dans le paquet plutôt que de mémoire :** `models/dom` est un
+point d'entrée séparé depuis la 6 et un bundle qui l'omet n'initialise jamais l'éditeur, en
+silence ; et `styleselect` n'existe plus (zéro occurrence dans `tinymce.js`), remplacé par
+`styles`. Le reste de la configuration passe tel quel — `addSplitButton`, `addIcon`,
+`insertContent`, thème `silver`, plugin `link`.
+
+**Vérifié dans le navigateur, pas seulement à la compilation :** l'éditeur s'initialise sur
+l'asset réellement construit, `styles` rend « Format Paragraph », et le bouton « Texte
+réservé » ouvre son menu et insère bien le placeholder dans le contenu. Sans identifiants :
+la sonde recharge la configuration exacte des vues depuis une page publique qui charge
+`app.js`.
+
+**Décision restante, et elle est juridique, pas technique.** Zéro avis n'existe qu'en 7.9.3,
+sous GPL-2.0-or-later. Comme Mix concatène TinyMCE avec le JS applicatif dans un `app.js`
+unique servi au navigateur, la question « œuvre combinée » se pose vraiment. À trancher par
+la Fondation, pas ici.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -770,6 +817,11 @@ Resend a été écarté sur son argument principal : sa « région UE » ne couv
 l'envoi**, le contenu et les logs restant aux États-Unis. Voir aussi : Mailjet (UE, mais
 plafond 200/jour sur le gratuit), MailPace (UE, zéro tracking).
 
+**Millésime du certificat.** Reporté à l'édition suivante : le certificat se met en place
+vers la fin de l'édition, pas à la migration. Concerne les deux `$text` codés en dur et leurs
+`SetXY` dans `CertificateService::generateCertificate()`, plus le choix du fond parmi
+`public/images/pdf/*-certificate-bg.jpg`. Déjà listé au *Yearly rollover* du `CLAUDE.md`.
+
 **Séparation bulk / transactionnel** (Phase 0 §7). Réduite à : ajouter les en-têtes
 `List-Unsubscribe` aux **4 annonces identiques** (`newsletter_start`,
 `newsletter_encouragement`, `new_educational_tool`, `end_year_communication_email`) et un
@@ -780,7 +832,6 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 ## 6. À faire avant la production
 
 - [ ] Pointer le `.env` de production vers un hôte SMTP (**D-04**)
-- [ ] Millésime du certificat codé en dur (`'2024'`/`'2025'`) dans `CertificateService::generateCertificate()` — et choisir le bon fond parmi `public/images/pdf/*-certificate-bg.jpg`
 - [ ] `MNR_MIN_QUIZ_RESPONSES` conforme au nombre de quiz de l'édition
 - [ ] Transférer `storage/app/certificats/` et `storage/app/documents/`
 - [ ] `APP_KEY` **copiée, jamais régénérée**
