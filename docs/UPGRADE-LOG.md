@@ -674,6 +674,44 @@ dire dès que l'autre disparaît. Sept fichiers de police partent avec lui : Cal
 n'existaient que pour lui, et les définitions `.php` sont supersédées par les `.json`, que
 FPDF 1.9 déprécie à chaque chargement. Restent `rockweb.json` et son `rockweb.z`.
 
+### D-48 · SparkPost en SMTP, en attendant le DNS de Scaleway
+**Le DNS de Scaleway dépend du client.** En attendant, l'expéditeur redevient SparkPost —
+sans réinstaller quoi que ce soit. Ce que Laravel 6.0 a supprimé, c'est le *driver API*
+`sparkpost` (qui exigeait Guzzle, retiré en D-31) ; le SMTP est le transport que toutes les
+versions parlent à l'identique. L'hôte `smtp.eu.sparkpostmail.com` garde en outre le contenu
+dans l'UE, ce qui était l'argument retenu pour Scaleway. Le passage à Scaleway sera trois
+lignes de `.env` : hôte, identifiant, clé.
+
+**Au passage, une configuration morte qui ne le disait pas.** `MAIL_ENCRYPTION=tls` traînait
+depuis la 5.7. Laravel 13 ne la lit plus du tout : `MailManager::createSmtpTransport()`
+déduit la connexion du seul schéma. La clé donnait donc l'impression que la sécurité du
+transport était fixée alors que rien ne la fixait. Elle est supprimée plutôt que laissée à
+faire illusion.
+
+Ce qui protège réellement les identifiants, c'est le STARTTLS opportuniste de Symfony, qui
+élève la socket **avant `AUTH`** — mais seulement si le serveur annonce `STARTTLS`. Un
+serveur qui ne l'annonce pas, mal configuré ou parce que la connexion a été dégradée, est
+accepté en silence et la clé API part en clair. `require_tls` transforme ce silence en refus ;
+`config/mail.php` l'active par défaut, un puits local comme Mailpit s'en exclut avec
+`MAIL_REQUIRE_TLS=false`. `SmtpTransportSecurityTest` fixe les trois cas (587 → STARTTLS
+exigé, 465 → TLS implicite, schéma explicite prioritaire) et interdit le retour de la clé
+morte.
+
+**`MAIL_ALWAYS_TO`.** Pointer une machine de développement vers un vrai fournisseur la met
+à un `queue:work` d'écrire à de vrais enseignants depuis une copie de la base de production.
+Quand la variable est renseignée, `AppServiceProvider` redirige tout vers cette adresse ;
+vide en production, où elle doit le rester. `phpunit.xml` la neutralise pour que la suite ne
+dépende pas du `.env` de la machine.
+
+**`php artisan mail:test <adresse>`** envoie un message de façon **synchrone**. Tout le
+courrier de cette application est mis en file : un échec d'identifiants finit normalement en
+ligne dans `failed_jobs` que personne ne lit — exactement la mauvaise boucle de retour quand
+ce qu'on teste, ce sont justement les identifiants et le domaine d'envoi. La commande affiche
+le transport résolu et rend le refus SMTP tel quel (un 550 nomme un domaine non vérifié, un
+535 de mauvais identifiants).
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -691,8 +729,8 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 
 ## 5. En attente / bloqué
 
-**Fournisseur de mail.** Décision en cours côté hiérarchie. Ne bloque **aucun** hop (voir
-D-04). Recommandation : **Scaleway TEM** — 0–1,20 €/an pour ~5 000 mails, stockage
+**Fournisseur de mail.** **Provisoirement SparkPost en SMTP** (D-48), le temps que le
+client publie le DNS de Scaleway. Cible inchangée : **Scaleway TEM** — 0–1,20 €/an pour ~5 000 mails, stockage
 entièrement en UE (fr-par), société française, SMTP `smtp.tem.scaleway.com`.
 Resend a été écarté sur son argument principal : sa « région UE » ne couvre **que
 l'envoi**, le contenu et les logs restant aux États-Unis. Voir aussi : Mailjet (UE, mais
@@ -708,7 +746,7 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 ## 6. À faire avant la production
 
 - [ ] Pointer le `.env` de production vers un hôte SMTP (**D-04**)
-- [ ] Millésime du certificat codé en dur (`'2024'`/`'2025'`) dans `NewCertificateService::generateCertificate()` — et choisir le bon fond parmi `public/images/pdf/*-certificate-bg.jpg`
+- [ ] Millésime du certificat codé en dur (`'2024'`/`'2025'`) dans `CertificateService::generateCertificate()` — et choisir le bon fond parmi `public/images/pdf/*-certificate-bg.jpg`
 - [ ] `MNR_MIN_QUIZ_RESPONSES` conforme au nombre de quiz de l'édition
 - [ ] Transférer `storage/app/certificats/` et `storage/app/documents/`
 - [ ] `APP_KEY` **copiée, jamais régénérée**

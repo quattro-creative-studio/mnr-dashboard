@@ -23,6 +23,9 @@
     <env name="SESSION_DRIVER" value="array"/>
     <env name="QUEUE_CONNECTION" value="sync"/>
     <env name="MAIL_DRIVER" value="array"/>
+    <!-- A developer .env may redirect all mail while testing a live
+         provider; the suite must not inherit that. -->
+    <env name="MAIL_ALWAYS_TO" value=""/>
   </php>
   <source>
     <include>
