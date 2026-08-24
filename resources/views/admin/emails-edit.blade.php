@@ -65,6 +65,14 @@
     <script>
         tinymce.init({
             selector: '#text',
+            // Mandatory since TinyMCE 7: without it the editor is disabled
+            // outright, not merely warned about. 'gpl' is the declaration
+            // that this self-hosted copy is used under GPL-2.0-or-later.
+            license_key: 'gpl',
+            // TinyMCE 6 added a promotional button inside the editor chrome
+            // ("Get all features"), which 5.10.9 did not have. An advert has no
+            // place in the editor a cancer foundation writes its mail in.
+            promotion: false,
             plugins: 'link',
             toolbar: 'undo redo | styles | bold italic | link | alignleft aligncenter alignright | placeholder',
             setup: function (editor) {
