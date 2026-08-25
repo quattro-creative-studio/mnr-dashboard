@@ -959,6 +959,43 @@ invisible en local — tout y est installé, donc tout s'y résout.
 
 ---
 
+### D-56 · La porte d'entrée, que rien ne testait
+**Trou repéré en mesurant la couverture des routes, pas en lisant le code.** `POST /login`
+n'avait aucun test. Toute la suite s'authentifie par `actingAs()` — et c'est précisément le
+problème : `actingAs()` place l'utilisateur directement sur le garde et n'exécute **jamais**
+`LoginController`, le trait `AuthenticatesUsers`, le throttle, la régénération de session ni
+la redirection par type. Le login pouvait être cassé, la suite serait restée verte, et
+**personne n'aurait pu entrer** — ni enseignant, ni administrateur.
+
+C'est aussi le chemin le plus perturbé par la montée : Laravel 7 a sorti ces traits du
+framework vers `laravel/ui`.
+
+12 tests ajoutés : connexion, mauvais mot de passe, adresse inconnue, redirection par type,
+régénération de l'identifiant de session, throttle, déconnexion, envoi du lien de
+réinitialisation, silence sur adresse inconnue, réinitialisation effective, et refus d'un
+jeton forgé.
+
+**Trois particularités de cette application découvertes en écrivant ces tests :**
+
+- `/logout` est une route **GET**, pas le POST que Laravel génère par défaut.
+- La réinitialisation **n'utilise pas** la Notification de Laravel : `User::sendPasswordResetNotification()`
+  met en file un Mailable maison, `ResetPasswordMail`. Un `Notification::fake()` ne voit donc
+  rien — il faut `Mail::fake()`.
+- **`RedirectIfAuthenticated` teste `teacher !== null` AVANT le type admin.** Un utilisateur
+  portant à la fois `type = admin` et un `teacher_id` serait envoyé dans l'espace enseignant
+  quoi qu'en dise son type. Ce n'est pas un défaut en production — un vrai administrateur n'a
+  pas de fiche enseignant — mais la factory `User` en attache une à tout le monde, ce qui
+  rendait ma fixture irréaliste. À garder en tête si une fiche admin héritait un jour d'un
+  `teacher_id`.
+
+**Couverture des routes en écriture : 9/25 → 12/25.** Les 11 restantes (documents, écoles,
+profils, réponses fête admin, settings, ajout d'utilisateur) partagent une propriété qui
+justifie de les laisser : **leur panne est bruyante**. Un admin qui clique et voit une erreur
+la signale. Le critère retenu tout au long de cette migration reste le même — couvrir en
+priorité ce qui casse en silence.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
