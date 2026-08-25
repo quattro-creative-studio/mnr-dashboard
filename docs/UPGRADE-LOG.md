@@ -929,6 +929,36 @@ l'import de codes.
 
 ---
 
+### D-55 · B-05 · un provider de dev déclaré à la main tuait le déploiement
+**Trouvé par la toute première installation Forge**, avant même un déploiement.
+`composer install --no-dev` s'est terminé sur :
+
+> `Class "Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider" not found`
+
+**Bug préexistant, pas une régression de la migration.** Le provider était listé à la main
+dans `config/app.php` depuis le commit `0105eb2 "Add ide helper"`, alors que le paquet est en
+`require-dev` — donc absent de tout serveur installé en `--no-dev`. Un provider déclaré dans
+la configuration est chargé inconditionnellement : `package:discover` meurt avant qu'une seule
+page ne soit servie.
+
+Le paquet **supporte l'auto-discovery** (`extra.laravel.providers` dans son `composer.json`) :
+la ligne manuelle était donc redondante en développement et fatale en production. Retirée,
+l'auto-discovery l'enregistre là où il existe et se tait là où il n'existe pas — les 5
+commandes `ide-helper:*` restent disponibles en local.
+
+**Vérifié contre la commande exacte de Forge**, pas par raisonnement. Première tentative
+invalide : un `composer dump-autoload --no-dev` laisse les paquets de dev dans
+`installed.json`, donc l'auto-discovery les retrouvait et l'erreur persistait pour une raison
+étrangère au correctif. Le vrai `composer install --no-dev` passe, `package:discover` sort
+en 0, puis `composer install` restaure les dépendances de dev.
+
+`ProductionAutoloadTest` ferme la catégorie entière : il lit les espaces de noms des paquets
+`require-dev` depuis `vendor/composer/installed.json` et refuse tout provider **ou alias** de
+`config/app.php` qui en relève. Vérifié en échec en remettant la ligne. Cette panne est
+invisible en local — tout y est installé, donc tout s'y résout.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -942,6 +972,7 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 | ~~B-02~~ | **Corrigé** — voir D-46. | | |
 | ~~B-03~~ | **Corrigé au hop 2** — voir D-12. | | |
 | ~~B-04~~ | **Corrigé** — voir D-49. | | |
+| ~~B-05~~ | **Corrigé** — voir D-55. | | |
 
 ---
 
