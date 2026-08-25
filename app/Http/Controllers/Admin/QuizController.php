@@ -53,8 +53,8 @@ class QuizController extends Controller {
         // Timezone stated explicitly: Carbon 3 defaults createFromTimestamp() to
         // UTC where Carbon 2 used the application timezone. Without this an admin
         // entering 18:00 gets 17:00 stored (16:00 in summer), and quiz:update --
-        // which compares closes_at against MySQL's CURRENT_TIMESTAMP every minute --
-        // closes the quiz an hour or two early with nothing reporting it.
+        // which closes quizzes every minute -- would fire an hour or two early
+        // with nothing reporting it.
         $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']), config('app.timezone'));
         $data['email_text'] = $data['email_text'] ?? "";
         $quiz = Quiz::create($data);
@@ -105,8 +105,8 @@ class QuizController extends Controller {
         // Timezone stated explicitly: Carbon 3 defaults createFromTimestamp() to
         // UTC where Carbon 2 used the application timezone. Without this an admin
         // entering 18:00 gets 17:00 stored (16:00 in summer), and quiz:update --
-        // which compares closes_at against MySQL's CURRENT_TIMESTAMP every minute --
-        // closes the quiz an hour or two early with nothing reporting it.
+        // which closes quizzes every minute -- would fire an hour or two early
+        // with nothing reporting it.
         $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']), config('app.timezone'));
         $data['email_text'] = $data['email_text'] ?? "";
         if($quiz->state === Quiz::STATE_CLOSED) {

@@ -892,6 +892,43 @@ garde après coup.
 
 ---
 
+### D-54 · MySQL 8.4 et les premières routes en écriture
+**MySQL 8.4.7 en local, port 3308.** `phpunit.xml` pointait encore sur 3306 : la suite serait
+restée verte en testant l'ancien 8.0.33, sans que rien ne le signale. Les deux ports étaient
+ouverts, les deux moteurs tournaient. Corrigé, avec un commentaire disant pourquoi le port du
+test doit suivre celui du `.env`. **105 tests repassent sur 8.4.7** sans une seule adaptation.
+
+**22 nouveaux tests sur les 9 routes en écriture les plus coûteuses.** La suite n'en touchait
+**aucune** des 26 : toute la chaîne requête → validation → persistance avait traversé huit
+majeures sans être exercée. Écartées d'emblée : `_ignition/*` (paquet en `require-dev`, absent
+en production sous `--no-dev`) et le webhook, déjà couvert.
+
+*Priorité 1 — sans elles le concours s'arrête* : inscription enseignant (hachage du mot de
+passe, unicité de l'email, consentement RGPD, mail de confirmation mis en file), ajout et
+édition de classe, fenêtre d'inscription, et la garde de propriété inline — un enseignant ne
+doit pas pouvoir modifier la classe d'un collègue.
+
+*Priorité 2 — le pilotage admin* : réécriture d'un mail éditable et refus d'un corps vide,
+déplacement des dates du concours, refus d'une clé inconnue, création de quiz (un
+`QuizInLanguage` par langue, extraction de l'id quiz-maker), refus d'une URL étrangère au
+service, refus d'une clôture passée, et les gardes d'état (`abort_if`) sur l'édition et
+l'import de codes.
+
+**Trois choses apprises en écrivant ces tests, aucune n'étant un bug :**
+
+- Les routes d'ajout et d'édition de classe **ne nomment pas leurs champs pareil** —
+  `class_name`/`class_students` d'un côté, `name`/`students` de l'autre.
+- `editable_dates.value` est une colonne **`date`**, pas `datetime` : l'heure soumise est
+  écartée. Granularité voulue, cohérente avec le `isCurrentDay()` des envois programmés.
+  Mon test attendait `08:00:00` ; c'est l'attente qui était fausse.
+- `editable_dates.label` est `NOT NULL` sans défaut, et un `migrate` neuf ne sème que 10 des
+  23 clés (D-44) : la fixture doit créer la ligne, pas seulement la mettre à jour.
+
+**Au passage :** deux commentaires de `Admin\QuizController` affirmaient encore que
+`quiz:update` compare `closes_at` à `CURRENT_TIMESTAMP`. Faux depuis D-49.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
