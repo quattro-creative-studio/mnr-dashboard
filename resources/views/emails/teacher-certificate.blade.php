@@ -7,7 +7,7 @@
 
     <p>La persévérance et le dévouement de vos classes en valaient la peine, et nous vous remercions pour votre participation au concours. En tout, 130 classes du Luxembourg avec 2528 élèves ont participé à cette édition, qui a donc été, grâce à vous, un grand succès !</p>
 
-    <p>Vous trouverez dans votre espace personnel, sous ce <a href="{{ route('certificate.page', ['uid' => $certificate->uid]) }}">lien</a>, votre certificat de participation.</p>
+    <p>Vous trouverez dans votre espace personnel, sous ce <a href="{{ route('certificate.page', ['certificate_uid' => $certificate->uid]) }}">lien</a>, votre certificat de participation.</p>
 
     <p>Nous avons également le plaisir d’annoncer les trois classes gagnantes de cette année, que nous félicitons très chaleureusement :</p>
 

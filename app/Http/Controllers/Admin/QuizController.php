@@ -50,7 +50,12 @@ class QuizController extends Controller {
 
         $data = $this->validate($request, $rules);
 
-        $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']));
+        // Timezone stated explicitly: Carbon 3 defaults createFromTimestamp() to
+        // UTC where Carbon 2 used the application timezone. Without this an admin
+        // entering 18:00 gets 17:00 stored (16:00 in summer), and quiz:update --
+        // which closes quizzes every minute -- would fire an hour or two early
+        // with nothing reporting it.
+        $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']), config('app.timezone'));
         $data['email_text'] = $data['email_text'] ?? "";
         $quiz = Quiz::create($data);
 
@@ -97,7 +102,12 @@ class QuizController extends Controller {
             'classes' => 'array',
             'classes.*' => 'int|exists:school_classes,id',
         ]);
-        $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']));
+        // Timezone stated explicitly: Carbon 3 defaults createFromTimestamp() to
+        // UTC where Carbon 2 used the application timezone. Without this an admin
+        // entering 18:00 gets 17:00 stored (16:00 in summer), and quiz:update --
+        // which closes quizzes every minute -- would fire an hour or two early
+        // with nothing reporting it.
+        $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']), config('app.timezone'));
         $data['email_text'] = $data['email_text'] ?? "";
         if($quiz->state === Quiz::STATE_CLOSED) {
             unset($data['email_text']);

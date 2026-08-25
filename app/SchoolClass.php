@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -51,13 +53,24 @@ use Ramsey\Uuid\Uuid;
  */
 class SchoolClass extends Model {
 
+
+    use HasFactory;
     protected $fillable = ['name', 'students', 'school_id', 'teacher_id', 'status_january', 'status_march',
         'status_may', 'status_party', 'january_token', 'january_sent_at', 'january_reminder_sent_at', 'march_token',
         'march_sent_at', 'march_reminder_sent_at', 'may_token', 'may_sent_at', 'may_reminder_sent_at', 'status_party',
         'party_token', 'party_sent_at', 'party_reminder_sent_at', 'party_group_reminder_sent_at'];
 
-    protected $dates = ['january_sent_at', 'january_reminder_sent_at', 'march_sent_at', 'march_reminder_sent_at',
-        'may_sent_at', 'may_reminder_sent_at', 'party_sent_at', 'party_reminder_sent_at', 'party_group_reminder_sent_at'];
+    protected $casts = [
+        'january_sent_at' => 'datetime',
+        'january_reminder_sent_at' => 'datetime',
+        'march_sent_at' => 'datetime',
+        'march_reminder_sent_at' => 'datetime',
+        'may_sent_at' => 'datetime',
+        'may_reminder_sent_at' => 'datetime',
+        'party_sent_at' => 'datetime',
+        'party_reminder_sent_at' => 'datetime',
+        'party_group_reminder_sent_at' => 'datetime',
+    ];
 
     public const STATUS_JANUARY = "january";
     public const STATUS_MARCH = "march";
@@ -245,13 +258,13 @@ class SchoolClass extends Model {
      * @return bool
      */
     public function isStillParticipating(): bool {
-        if (Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_3))) {
+        if (EditableDate::hasPassed(EditableDate::FOLLOW_UP_3)) {
             return $this->status_may === true;
         }
-//        if (Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_2))) {
+//        if (EditableDate::hasPassed(EditableDate::FOLLOW_UP_2)) {
 //            return $this->status_march === true;
 //        }
-//        if (Carbon::now()->gte(EditableDate::find(EditableDate::FOLLOW_UP_1))) {
+//        if (EditableDate::hasPassed(EditableDate::FOLLOW_UP_1)) {
 //            return $this->status_january === true;
 //        }
         return true;

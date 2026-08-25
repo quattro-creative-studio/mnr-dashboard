@@ -1,0 +1,123 @@
+<?php
+
+namespace Tests\Concerns;
+
+use App\Quiz;
+use App\QuizAssignment;
+use App\QuizCode;
+use App\QuizInLanguage;
+use App\SchoolClass;
+use App\Teacher;
+use App\User;
+use Carbon\Carbon;
+
+/**
+ * Fixture builders for the characterisation suite.
+ *
+ * Migrations already seed salutations, schools, editable emails and editable
+ * dates, so the factories can rely on those existing.
+ */
+trait BuildsDomainFixtures
+{
+    /**
+     * The Teacher factory picks its salutation with inRandomOrder(), which makes
+     * every assertion about titles ("Monsieur" vs "Madame") flaky. Fixtures in a
+     * characterisation suite have to be deterministic, so pin it here and let a
+     * caller opt into a different one explicitly.
+     *
+     * The user is created through the User factory rather than the other way
+     * round: the User factory's default creates its own Teacher eagerly, so
+     * building the Teacher first would leave an orphan behind and quietly change
+     * what Teacher::all() returns.
+     */
+    protected function makeTeacher(array $userAttributes = [], int $salutationId = 1): Teacher
+    {
+        $user = User::factory()->create($userAttributes);
+
+        $teacher = $user->teacher;
+        $teacher->salutation_id = $salutationId;
+        $teacher->save();
+
+        return $teacher->fresh();
+    }
+
+    protected function makeClass(?Teacher $teacher = null, array $attributes = []): SchoolClass
+    {
+        $teacher = $teacher ?: $this->makeTeacher();
+
+        return SchoolClass::factory()->create(array_merge([
+            'teacher_id' => $teacher->id,
+        ], $attributes));
+    }
+
+    /**
+     * Attach $count answered quiz responses to a class.
+     *
+     * Eligibility is counted from quiz_responses, so this is the only lever
+     * that decides party and certificate access.
+     */
+    protected function giveQuizResponses(SchoolClass $class, int $count): void
+    {
+        for ($i = 0; $i < $count; $i++) {
+            $assignment = $this->makeQuizAssignment($class, $i);
+
+            $assignment->response()->create([
+                'quizmaker_response_id' => 9000 + $i,
+                'score' => 5,
+                'responded_at' => Carbon::now(),
+            ]);
+        }
+    }
+
+    protected function makeQuizAssignment(SchoolClass $class, int $seed = 0): QuizAssignment
+    {
+        $quiz = Quiz::create([
+            'name' => "Quiz {$seed}",
+            'email_text' => 'Texte du quiz',
+            'max_score' => 10,
+        ]);
+
+        return QuizAssignment::create([
+            'quiz_id' => $quiz->id,
+            'school_class_id' => $class->id,
+        ]);
+    }
+
+    /**
+     * Build the quiz-maker chain a webhook payload matches against:
+     * quiz -> quiz_in_language (holds quiz_maker_id) -> assignment -> code.
+     *
+     * The language record is reused when one already exists for that
+     * quiz_maker_id, because that is the real shape: a quiz has ONE record per
+     * language, carrying MANY codes -- one per participating class. The
+     * controller resolves the language with a single ->first(), so a fixture
+     * that created a second one would leave its codes unreachable and quietly
+     * make a test pass or fail for the wrong reason.
+     */
+    protected function makeQuizCode(SchoolClass $class, string $quizMakerId, string $code): QuizCode
+    {
+        $language = QuizInLanguage::query()->where('quiz_maker_id', $quizMakerId)->first();
+
+        if ($language === null) {
+            $assignment = $this->makeQuizAssignment($class);
+
+            $language = QuizInLanguage::create([
+                'language' => 'fr',
+                'quiz_id' => $assignment->quiz_id,
+                'quiz_maker_id' => $quizMakerId,
+            ]);
+        } else {
+            // Same quiz, another class: one assignment per class per quiz.
+            $assignment = QuizAssignment::create([
+                'quiz_id' => $language->quiz_id,
+                'school_class_id' => $class->id,
+            ]);
+        }
+
+        return QuizCode::create([
+            'quiz_assignment_id' => $assignment->id,
+            'quiz_in_language_id' => $language->id,
+            'code' => $code,
+        ]);
+    }
+}

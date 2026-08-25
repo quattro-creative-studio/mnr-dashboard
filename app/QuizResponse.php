@@ -27,8 +27,8 @@ class QuizResponse extends Model {
         'responded_at',
     ];
 
-    protected $dates = [
-        'responded_at',
+    protected $casts = [
+        'responded_at' => 'datetime',
     ];
 
     public function assignment() {

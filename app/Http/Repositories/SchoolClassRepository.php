@@ -4,14 +4,13 @@
 namespace App\Http\Repositories;
 
 
-use App\Http\Controllers\Controller;
 use App\SchoolClass;
 use App\Teacher;
 use App\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-class SchoolClassRepository extends Controller
+class SchoolClassRepository
 {
     /**
      * Finds SchoolClass by one of its status tokens

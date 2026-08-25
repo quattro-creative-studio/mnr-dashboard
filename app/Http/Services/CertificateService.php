@@ -2,14 +2,21 @@
 
 namespace App\Http\Services;
 
-use App\Http\Controllers\Controller;
 use App\SchoolClass;
 use Fpdf\Fpdf;
 
-class CertificateService extends Controller {
+/**
+ * Renders the participation certificate: a landscape A4 PDF drawn with FPDF at
+ * absolute coordinates over a JPEG background, using the Rockwell font loaded
+ * from resources/fpdf/.
+ *
+ * Text is converted to windows-1252 before being drawn, because this is plain
+ * FPDF rather than a unicode variant -- every French accent the contest needs
+ * fits inside that encoding.
+ */
+class CertificateService {
 
-    private $fontSizeSmall = 18;
-    private $fontSizeLarge = 24;
+    private $fontSizeLarge = 25;
     private $lineHeight = 11.5;
 
     public function __construct() {
@@ -24,8 +31,10 @@ class CertificateService extends Controller {
     private function createPdf(): Fpdf {
         $pdf = new Fpdf('L');
         $pdf->AddPage();
-        $pdf->AddFont('Calibri','', 'Calibri.php');
-        $pdf->AddFont('Calibri','B', 'CALIBRIB.php');
+        // .json, not .php: FPDF 1.9 still loads the legacy PHP definitions but
+        // triggers E_USER_DEPRECATED for each one. Converted with the bundled
+        // makefont utility, which does not need the original TTF.
+        $pdf->AddFont('RockwellBold', 'B', 'rockweb.json');
         return $pdf;
     }
 
@@ -40,13 +49,22 @@ class CertificateService extends Controller {
         $pdf->SetTitle('Certificat', true);
         $pdf->SetAuthor('Fondation Cancer', true);
 
-        $pdf->Image(public_path('images/pdf/bg.jpg'), 0, 0, $pdf->GetPageWidth(), $pdf->GetPageHeight());
+        $pdf->Image(public_path('images/pdf/certificate-bg.jpg'), 0, 0, $pdf->GetPageWidth(), $pdf->GetPageHeight());
 
-        $this->line($pdf, 'La Fondation Cancer félicite la classe');
-        $this->line($pdf, $class->name, 2, 'B');
-        $this->line($pdf, $class->school->name, 3, 'B');
-        $this->line($pdf, 'pour avoir relevé avec succès le défi de', 4);
-        $this->line($pdf, 'ne pas fumer durant cinq mois.', 4.7);
+        $pdf->SetTextColor(38, 36, 37);
+        $pdf->SetFont('RockwellBold', 'B', 12);
+        $text = '2024';
+        $pdf->SetXY(60, 29.5);
+        $pdf->Cell(50, 10, $text, 0, 0, 'R');
+
+        $pdf->SetTextColor(38, 36, 37);
+        $pdf->SetFont('RockwellBold', 'B', 12);
+        $text = '2025';
+        $pdf->SetXY(188, 29.5);
+        $pdf->Cell(50, 10, $text, 0, 0, 'L');
+
+        $this->line($pdf, $class->name, 1.3, 'B');
+        $this->line($pdf, $class->school->name, 2.3, 'B');
 
         return $pdf->Output('S', 'certificat.pdf');
     }
@@ -59,11 +77,9 @@ class CertificateService extends Controller {
      * @param string $style empty: default, 'B': Bold and large
      */
     private function line(Fpdf $pdf, string $text, $pos = 1, string $style = '') {
-        if($style == '') {
-            $pdf->SetFont('Calibri', '', $this->fontSizeSmall);
-        } else if($style == 'B') {
-            $pdf->SetFont('Calibri', 'B', $this->fontSizeLarge);
-        }
+
+        $pdf->SetFont('RockwellBold', 'B', $this->fontSizeLarge);
+
 
         $textC = $this->conv($text);
         $textW = $pdf->GetStringWidth($textC);

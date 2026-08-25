@@ -26,7 +26,7 @@ class ProfileUpdateRequest extends FormRequest {
             'first_name' => 'required|string',
             'email' => 'required|email|unique:users,email,' . \Auth::user()->id,
             'phone' => 'required|string',
-            'password' => 'nullable|string|min:6|confirmed',
+            'password' => 'nullable|string|min:8|confirmed',
         ];
     }
 }

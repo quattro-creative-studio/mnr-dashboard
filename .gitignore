@@ -18,3 +18,4 @@ composer.phar
 .nvmrc
 yarn.lock
 /CLAUDE.md
+.phpunit.cache

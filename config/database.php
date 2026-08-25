@@ -108,7 +108,10 @@ return [
 
     'redis' => [
 
-        'client' => 'predis',
+        // phpredis, not predis: it is a C extension rather than pure PHP, it is
+        // Laravel's default from 6.0 onward, and it is what Forge provisions.
+        // Overridable so a host without the extension can fall back.
+        'client' => env('REDIS_CLIENT', 'phpredis'),
 
         'options'=>[
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),

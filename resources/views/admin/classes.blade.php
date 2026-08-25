@@ -132,7 +132,7 @@
                         </a>
                         @else
                         <span class="d-inline-block" tabindex="0" data-toggle="tooltip" data-placement="bottom"
-                              title="Sera activé : {{ \App\EditableDate::find(\App\EditableDate::FOLLOW_UP_3)->toDateString() }}">
+                              title="Sera activé : {{ optional(\App\EditableDate::find(\App\EditableDate::FOLLOW_UP_3))->toDateString() ?? 'date non configurée' }}">
                             <button disabled class="btn btn-primary" type="button" style="pointer-events: none;">
                                 Mai
                             </button>

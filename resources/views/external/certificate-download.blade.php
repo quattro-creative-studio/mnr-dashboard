@@ -14,7 +14,7 @@
                         Téléchargez votre certificat ici :
                     </h3>
 
-                    <a class="btn btn-primary mt-3" href="{{ route('certificate.download', ['certificate' => $certificate->uid]) }}">certification de participation</a>
+                    <a class="btn btn-primary mt-3" href="{{ route('certificate.download', ['certificate_uid' => $certificate->uid]) }}">certification de participation</a>
                 </div>
             </div>
         </div>

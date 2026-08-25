@@ -5,10 +5,9 @@ namespace App\Http\Repositories;
 
 
 use App\EditableEmail;
-use App\Http\Controllers\Controller;
 use App\SchoolClass;
 
-class EmailRepository extends Controller {
+class EmailRepository {
 
     /**
      * @param string $status

@@ -41,15 +41,23 @@ class QuizController extends Controller {
                 continue;
             }
             if ($quizCode->assignment->response()->exists()) {
+                // continue, not return: this abandons ONE already-recorded code,
+                // not the rest of the payload. quiz-maker retries a delivery by
+                // replaying it in full, so a `return` here dropped every later
+                // response in the batch -- silently, since the endpoint always
+                // answers an empty 200 and never reports failure upstream.
                 \Log::warning("Given code is already in database.. skipping it", ['code' => $code]);
-                return response('');
+                continue;
             }
             $quizCode->assignment->response()->updateOrCreate([
                 'quizmaker_response_id' => $res->id,
             ], [
                 'quizmaker_response_id' => $res->id,
                 'score' => $res->score,
-                'responded_at' => Carbon::createFromTimestampMs($res->times->end),
+                // Timezone stated explicitly. Carbon 3 changed createFromTimestampMs()
+                // to default to UTC, where Carbon 2 used the application timezone --
+                // so this silently started writing responded_at an hour out.
+                'responded_at' => Carbon::createFromTimestampMs($res->times->end, config('app.timezone')),
             ]);
         }
 

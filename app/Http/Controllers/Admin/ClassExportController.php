@@ -8,6 +8,7 @@ use App\QuizAssignment;
 use App\SchoolClass;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Exception;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -32,7 +33,11 @@ class ClassExportController extends Controller {
         $writer = new XlsxWriter($spreadsheet);
         \Storage::makeDirectory('export/classes');
         $relPath = "export/classes/classes-" . date('YmdHis') . ".xlsx";
-        $writer->save("../storage/app/$relPath");
+        // Storage::path() rather than a hardcoded "../storage/app/..." relative
+        // path: that only resolves correctly when the working directory is
+        // public/, which is true under php-fpm and false from the console, a
+        // queue worker, or a test -- where it would write outside the project.
+        $writer->save(\Storage::path($relPath));
         return \Storage::download($relPath);
     }
 
@@ -66,17 +71,20 @@ class ClassExportController extends Controller {
         $headers[] = "QUIZ TOTAL";
         $sheet->getRowDimension(1)->setRowHeight(50);
         for ($i = 1; $i <= count($headers); $i++) {
-            $sheet->setCellValueByColumnAndRow($i, 1, $headers[$i - 1]);
+            $sheet->setCellValue([$i, 1], $headers[$i - 1]);
             $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
-            $sheet->getStyleByColumnAndRow($i, 1)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyleByColumnAndRow($i, 1)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-            $sheet->getStyleByColumnAndRow($i, 1)->getFont()->setBold(true);
-            $sheet->getStyleByColumnAndRow($i, 1)->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFFCD5B4'));
-            $sheet->getStyleByColumnAndRow($i, 1)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)
+            $sheet->getStyle([$i, 1])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle([$i, 1])->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle([$i, 1])->getFont()->setBold(true);
+            $sheet->getStyle([$i, 1])->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFFCD5B4'));
+            $sheet->getStyle([$i, 1])->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)
                 ->setColor(new Color(Color::COLOR_BLACK));
         }
 
-        $sheet->setAutoFilterByColumnAndRow(1, 1, sizeof($headers), SchoolClass::count() + 1);
+        $sheet->setAutoFilter(
+            Coordinate::stringFromColumnIndex(1).'1:'
+            .Coordinate::stringFromColumnIndex(sizeof($headers)).(SchoolClass::count() + 1)
+        );
     }
 
     private function addData(Worksheet $sheet) {
@@ -112,10 +120,13 @@ class ClassExportController extends Controller {
 
             for($i = 0; $i < sizeof($data); $i++) {
                 $col = $i + 1;
-                $sheet->setCellValueByColumnAndRow($col, $row, $data[$i]);
+                $sheet->setCellValue([$col, $row], $data[$i]);
             }
 
-            $sheet->getStyleByColumnAndRow(1, $row, $col, $row)
+            $sheet->getStyle(
+                Coordinate::stringFromColumnIndex(1).$row.':'
+                .Coordinate::stringFromColumnIndex($col).$row
+            )
                 ->getBorders()
                 ->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN)

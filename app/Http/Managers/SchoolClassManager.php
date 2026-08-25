@@ -6,9 +6,8 @@ namespace App\Http\Managers;
 
 use App\EditableDate;
 use App\EditableEmail;
-use App\Http\Controllers\Controller;
 use App\Http\Repositories\EmailRepository;
-use App\Http\Services\NewCertificateService;
+use App\Http\Services\CertificateService;
 use App\Mail\CustomEmail;
 use App\SchoolClass;
 use Carbon\Carbon;
@@ -17,7 +16,7 @@ use Log;
 use Ramsey\Uuid\Uuid;
 use Storage;
 
-class SchoolClassManager extends Controller
+class SchoolClassManager
 {
 
     /**
@@ -30,7 +29,7 @@ class SchoolClassManager extends Controller
      */
     private $certificateService;
 
-    public function __construct(EmailRepository $emailRepository, NewCertificateService  $certificateService)
+    public function __construct(EmailRepository $emailRepository, CertificateService  $certificateService)
     {
         $this->emailRepository = $emailRepository;
         $this->certificateService = $certificateService;
@@ -90,6 +89,7 @@ class SchoolClassManager extends Controller
         return $class->arePreviousStatusesPositive($whichStatus)
             && $sentAt === null
             && $statusValue === null
+            && $followupDate !== null
             && Carbon::now()->gte($followupDate);
     }
 
@@ -123,7 +123,9 @@ class SchoolClassManager extends Controller
             $followupReminderDate = Carbon::create(2000, 1, 1, 0, 0, 0);
             $reminderSentAt = null;
         }
-        return $reminderSentAt === null && Carbon::now()->gte($followupReminderDate);
+        return $reminderSentAt === null
+            && $followupReminderDate !== null
+            && Carbon::now()->gte($followupReminderDate);
     }
 
     public function shouldSendPartyReminder(SchoolClass $class): bool
@@ -137,8 +139,7 @@ class SchoolClassManager extends Controller
         if ($class->party_reminder_sent_at !== null)
             return false;
 
-        $reminderDate = EditableDate::find(EditableDate::INVITE_PARTY_REMINDER);
-        return Carbon::now()->gte($reminderDate);
+        return EditableDate::hasPassed(EditableDate::INVITE_PARTY_REMINDER);
     }
 
     public function shouldSendPartyGroupReminder(SchoolClass $class)
@@ -155,8 +156,7 @@ class SchoolClassManager extends Controller
         if ($class->party_group_reminder_sent_at !== null)
             return false;
 
-        $reminderDate = EditableDate::find(EditableDate::PARTY_GROUP_REMINDER);
-        return Carbon::now()->gte($reminderDate);
+        return EditableDate::hasPassed(EditableDate::PARTY_GROUP_REMINDER);
     }
 
     /**

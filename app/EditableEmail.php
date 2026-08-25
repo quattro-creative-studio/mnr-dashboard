@@ -114,7 +114,11 @@ class EditableEmail extends Model {
             ->dates()
             ->get()
             ->map(function (EditableDate $date) {
-                return $date->value->toDateString() . ' (' . $date->label . ')';
+                // value is nullable in the schema; a date row without one would
+                // otherwise take down every screen that prints this accessor.
+                $when = optional($date->value)->toDateString() ?? 'non configurée';
+
+                return $when . ' (' . $date->label . ')';
             })
             ->implode(', ');
     }

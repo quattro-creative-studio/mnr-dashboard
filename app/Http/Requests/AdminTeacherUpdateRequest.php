@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\User;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Input;
 
 class AdminTeacherUpdateRequest extends FormRequest {
 
@@ -23,7 +22,7 @@ class AdminTeacherUpdateRequest extends FormRequest {
      * @return array
      */
     public function rules() {
-        $user_id = Input::route('teacher')->user->id;
+        $user_id = $this->route('teacher')->user->id;
         return [
             'salutation_id' => 'integer|required|exists:salutations,id',
             'last_name' => 'string|required',

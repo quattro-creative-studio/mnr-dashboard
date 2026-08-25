@@ -99,14 +99,14 @@
                     <td>
                         @php($cert = $class->certificate()->exists())
                         <div class="btn-group pull-right">
-                            <a href="{{ route('admin.certificates.download', [$class->certificate]) }}"
+                            <a href="{{ $cert ? route('admin.certificates.download', [$class->certificate]) : '#' }}"
                                class="btn btn-info text-white {{ !$cert ? 'disabled' : '' }}">
                                 <i class="fa fa-fw fa-eye"></i>
                             </a>
                             <a href="{{ route('admin.certificates.generate', [$class]) }}" class="btn btn-primary">
                                 <i class="fa fa-fw fa-refresh"></i>
                             </a>
-                            <a href="{{ route('admin.certificates.delete', [$class->certificate]) }}" class="btn btn-danger {{ !$cert ? 'disabled' : '' }}">
+                            <a href="{{ $cert ? route('admin.certificates.delete', [$class->certificate]) : '#' }}" class="btn btn-danger {{ !$cert ? 'disabled' : '' }}">
                                 <i class="fa fa-fw fa-trash-o"></i>
                             </a>
                         </div>

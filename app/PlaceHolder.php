@@ -97,10 +97,14 @@ class PlaceHolder {
                 throw new \Exception("certificate must not be null");
             return route('certificate.download', [$class->certificate->uid]);
         }
+        // The route declares {stillNonSmoking}, not {status}. Laravel 5.x filled the
+        // missing segment positionally from the leftover value and produced the right
+        // URL by accident; Laravel 6 raises UrlGenerationException instead. Same URL,
+        // correctly named parameter.
         if ($subject === "SUIVI_OUI")
-            return route('follow-up', ['token' => $class->getCurrentToken(), 'status' => 'true']);
+            return route('follow-up', ['token' => $class->getCurrentToken(), 'stillNonSmoking' => 'true']);
         if ($subject === "SUIVI_NON")
-            return route('follow-up', ['token' => $class->getCurrentToken(), 'status' => 'false']);
+            return route('follow-up', ['token' => $class->getCurrentToken(), 'stillNonSmoking' => 'false']);
         if ($subject === "LIEN_FETE")
             return route('teacher.party');
         if ($subject === "LIEN_FETE_OUI")

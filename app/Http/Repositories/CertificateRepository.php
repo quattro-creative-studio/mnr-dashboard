@@ -2,9 +2,8 @@
 namespace App\Http\Repositories;
 
 use App\Certificate;
-use App\Http\Controllers\Controller;
 
-class CertificateRepository extends Controller {
+class CertificateRepository {
 
     public function getByUid($uid): ?Certificate {
         return Certificate::query()

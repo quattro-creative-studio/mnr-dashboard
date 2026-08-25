@@ -40,9 +40,9 @@ class Quiz extends Model {
         'sent_at',
     ];
 
-    protected $dates = [
-        'closes_at',
-        'sent_at',
+    protected $casts = [
+        'closes_at' => 'datetime',
+        'sent_at' => 'datetime',
     ];
 
     public function quizInLanguage() {
