@@ -11,6 +11,14 @@
         </div>
     @endif
 
+    {{-- The controller refuses self-deletion and removal of the last
+         administrator; without this block those refusals would be silent. --}}
+    @if(Session::has('error'))
+        <div class="alert alert-danger">
+            {{ Session::get('error') }}
+        </div>
+    @endif
+
     <div class="col-sm-6 mb-2">
         <div class="card">
             <div class="card-header">
@@ -21,7 +29,7 @@
                     Ajoutez un utilisateur qui aura accès à toutes les fonctions administratives.
                 </p>
                 <a href="{{ route('admin.users.add') }}" class="card-link btn btn-primary">
-                    Je veux ajouter un utilisateur
+                    Inviter un administrateur
                 </a>
             </div>
         </div>
@@ -33,18 +41,37 @@
             <thead>
             <tr>
                 <th>E-mail</th>
+                <th>Actions</th>
             </tr>
             </thead>
             <tbody>
-            @forelse($users as $user)
+            @foreach($users as $user)
                 <tr>
-                    <td>{{ $user->email }}</td>
+                    <td>
+                        {{ $user->email }}
+                        @if($user->id === Auth::id())
+                            <span class="badge badge-secondary ml-1">vous</span>
+                        @endif
+                    </td>
+                    <td class="text-nowrap">
+                        <x-action-button :action="route('admin.users.resend', [$user])"
+                                         confirm="Renvoyer une invitation à {{ $user->email }} ?"
+                                         title="Renvoyer l'invitation">
+                            <i class="fa fa-fw fa-envelope"></i>
+                        </x-action-button>
+                        {{-- Deleting yourself, or the last administrator, is
+                             refused by the controller as well: hiding the button
+                             is a courtesy, not the guard. --}}
+                        <x-action-button :action="route('admin.users.delete', [$user])"
+                                         method="DELETE" variant="danger"
+                                         :disabled="$user->id === Auth::id() || $users->count() <= 1"
+                                         confirm="Supprimer définitivement {{ $user->email }} ?"
+                                         title="Supprimer">
+                            <i class="fa fa-fw fa-trash-o"></i>
+                        </x-action-button>
+                    </td>
                 </tr>
-            @empty
-                <tr>
-                    <td class="text-center">Aucun utilisateur disponible</td>
-                </tr>
-            @endforelse
+            @endforeach
             </tbody>
         </table>
 

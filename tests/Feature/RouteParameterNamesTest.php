@@ -40,9 +40,15 @@ class RouteParameterNamesTest extends TestCase
         $declared = [];
 
         foreach (Route::getRoutes() as $route) {
-            if ($route->getName()) {
-                $declared[$route->getName()] = $route->parameterNames();
+            if (! $route->getName()) {
+                continue;
             }
+
+            // Required only: an optional {param?} may legitimately be omitted,
+            // so demanding it would flag correct calls.
+            preg_match_all('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', $route->uri(), $required);
+
+            $declared[$route->getName()] = $required[1];
         }
 
         return $declared;
@@ -94,11 +100,17 @@ class RouteParameterNamesTest extends TestCase
                     continue;
                 }
 
-                $unknown = array_diff($keys[1], $declared[$name]);
+                // Extra keys are not an error: Laravel appends them as a query
+                // string, which is how its own password-reset link carries the
+                // email address. The defect this guard exists for is the
+                // opposite -- a required parameter misspelled, so it lands in
+                // the query string and the real one is missing, which throws
+                // UrlGenerationException at render time.
+                $missing = array_diff($declared[$name], $keys[1]);
 
-                if ($unknown) {
+                if ($missing) {
                     $problems[] = sprintf(
-                        '%s: route [%s] declares (%s) but was given (%s)',
+                        '%s: route [%s] requires (%s) but was given (%s)',
                         $relative,
                         $name,
                         implode(', ', $declared[$name]) ?: 'no parameters',

@@ -22,8 +22,9 @@ class AdminUserCreateRequest extends FormRequest {
      */
     public function rules() {
         return [
+            // No password: the invitee sets their own through the reset form,
+            // so nobody has to type one for someone else and send it onward.
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
         ];
     }
 }

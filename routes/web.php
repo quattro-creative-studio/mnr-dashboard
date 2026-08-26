@@ -121,6 +121,8 @@ Route::group(['middleware' => ['auth', 'admin']], function () {;
         Route::get('/admin/users', 'UserController@users')->name('admin.users');
         Route::get('/admin/users/add', 'UserController@usersAdd')->name('admin.users.add');
         Route::post('/admin/users/add', 'UserController@usersAddPost')->name('admin.users.add.post');
+        Route::post('/admin/users/{user}/resend', 'UserController@usersResend')->name('admin.users.resend');
+        Route::delete('/admin/users/{user}', 'UserController@usersDelete')->name('admin.users.delete');
 
         // Settings
         Route::get('/settings', 'SettingsController@index')->name('admin.settings');

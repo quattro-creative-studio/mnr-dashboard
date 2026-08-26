@@ -97,6 +97,19 @@ return [
             'table' => 'password_resets',
             'expire' => 60,
         ],
+
+        /*
+        | An administrator invitation is not a password recovery. Sixty minutes
+        | is right for someone who has just clicked "I forgot", and wrong for an
+        | invitation that arrives during a meeting and gets opened the next
+        | morning. Same token table, same reset form -- only the lifetime
+        | differs, so recovery is not weakened to accommodate invitations.
+        */
+        'invitations' => [
+            'provider' => 'users',
+            'table' => 'password_resets',
+            'expire' => 60 * 24 * 7,
+        ],
     ],
 
 ];

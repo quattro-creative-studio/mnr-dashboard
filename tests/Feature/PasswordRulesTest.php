@@ -76,9 +76,11 @@ class PasswordRulesTest extends TestCase
         // authenticated user, so it needs a session to be readable at all.
         $this->actingAs($this->makeTeacher()->user);
 
+        // AdminUserCreateRequest is deliberately absent: administrators are
+        // invited, not given a password, so theirs is set through the reset
+        // path itself and cannot disagree with it.
         $explicit = [
             \App\Http\Requests\ProfileUpdateRequest::class => 'password',
-            \App\Http\Requests\AdminUserCreateRequest::class => 'password',
             \App\Http\Requests\TeacherRegisterRequest::class => 'teacher_password',
         ];
 

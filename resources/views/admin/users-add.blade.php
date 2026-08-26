@@ -20,22 +20,12 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label for="password">Mot de passe</label>
-            <input required type="password" name="password" id="password"
-                   class="form-control {{ inputValidationClass($errors, 'password') }}">
-            <div class="invalid-feedback">
-                {{ inputValidationMessages($errors, 'password') }}
-            </div>
-        </div>
+        <p class="text-secondary">
+            Aucun mot de passe à saisir&nbsp;: la personne invitée recevra un mail
+            avec un lien valable 7 jours pour choisir le sien.
+        </p>
 
-        <div class="form-group">
-            <label for="password_confirmation">Confirmation du mot de passe</label>
-            <input required type="password" name="password_confirmation" id="password_confirmation"
-                   class="form-control {{ inputValidationClass($errors, 'password') }}">
-        </div>
-
-        <input type="submit" class="btn btn-primary" value="Ajouter">
+        <input type="submit" class="btn btn-primary" value="Envoyer l'invitation">
 
     </form>
 

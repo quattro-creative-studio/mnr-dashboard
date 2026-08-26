@@ -1225,6 +1225,47 @@ CSRF, les bons verbes, confirmation sur les actions destructives, et aucun lien 
 
 ---
 
+### D-64 · Invitation d'administrateur, plutôt qu'un mot de passe saisi pour autrui
+**Construit sur l'existant, sans paquet.** `spatie/laravel-welcome-notification` avait été
+envisagé ; il repose sur les **Notifications** Laravel et les **URL signées**, or cette
+application n'utilise ni l'une ni l'autre — Mailables maison, jetons en base, zéro route
+signée. Le paquet aurait ajouté un second mécanisme parallèle à celui qui fonctionne déjà.
+
+**Ce qui change.** `POST admin/users/add` ne demande plus de mot de passe : le compte est créé
+avec un aléatoire de 64 caractères que personne n'apprend, et l'invité choisit le sien via le
+formulaire de reset existant. On supprime ainsi l'étape où quelqu'un tape un mot de passe pour
+un autre et le transmet par un canal qu'il ne maîtrise pas.
+
+**Broker `invitations`, 7 jours.** Même table de jetons, même formulaire ; seule la durée de
+vie diffère. Soixante minutes convient à quelqu'un qui vient de cliquer « mot de passe
+oublié », pas à une invitation reçue en réunion et ouverte le lendemain. Le broker `users`
+reste à 60 minutes : la récupération n'est pas affaiblie pour arranger l'invitation.
+
+**Renvoi et suppression**, tous deux demandés. La suppression refuse deux gestes que personne
+ne fait exprès : **supprimer son propre compte**, et **supprimer le dernier administrateur** —
+ce dernier verrouillerait l'administration sans autre issue que la commande artisan. Les
+boutons sont désactivés dans la vue, mais **les refus sont dans le contrôleur** : la vue est
+une courtoisie, pas la garde.
+
+`teacher_id` reste `null` à la création, pour la raison de D-56 : `RedirectIfAuthenticated`
+teste la fiche enseignant avant le type admin.
+
+**Trois choses apprises en écrivant les tests :**
+
+- **Le formulaire de reset ne préremplissait pas l'adresse.** Il lisait `old('email')`
+  seulement, alors que Laravel passe `?email=` à la vue. Un invité saisissant une autre
+  adresse que celle invitée obtient une erreur de jeton sans explication. Corrigé.
+- **`RouteParameterNamesTest` était trop strict.** Il refusait toute clé non déclarée, alors
+  que Laravel les ajoute en query string — c'est exactement ainsi que sa propre notification
+  de reset transporte l'email. Retourné sur le vrai défaut : **un paramètre requis manquant**,
+  ce qui est le cas quand on en écrit un de travers (B-03). Vérifié en échec en renommant
+  `token` en `jeton`.
+- **`PasswordRulesTest` attendait une règle de mot de passe** sur `AdminUserCreateRequest`.
+  Elle n'a plus lieu d'être : l'administrateur n'en saisit plus, le sien passe par le chemin
+  de reset et ne peut donc pas diverger de lui.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés

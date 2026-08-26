@@ -23,7 +23,12 @@
                 <label for="email">Adresse e-mail</label>
                 <input required type="email" name="email" id="email"
                        class="form-control {{ inputValidationClass($errors, 'email') }}"
-                       value="{{ old('email') }}">
+                       {{-- $email comes from the ?email= parameter Laravel's
+                            showResetForm passes through. Prefilling matters for
+                            invitations: an invitee typing a different address
+                            than the one invited gets a token mismatch and no
+                            explanation. --}}
+                       value="{{ old('email', $email ?? '') }}">
                 <div class="invalid-feedback">
                     {{ inputValidationMessages($errors, 'email') }}
                 </div>
