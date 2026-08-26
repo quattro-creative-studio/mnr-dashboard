@@ -1057,6 +1057,34 @@ le script de déploiement : un worker est un processus long qui garde l'ancien c
 
 ---
 
+### D-59 · Deux commandes d'exploitation : `queue:test` et `admin:create`
+**`php artisan queue:test [--mail=adresse]`.** `deploy:check` ne peut dire que « la file est
+vide » — ce qui est vrai d'un worker en bonne santé comme d'un worker inexistant. Cette
+commande dépose un job et attend qu'il ressorte : c'est la seule façon de distinguer les deux.
+
+Le job ne touche **aucune donnée métier**, délibérément : tester la file en déclenchant une
+vraie fonctionnalité mêle « le worker tourne-t-il » et « cette fonctionnalité marche-t-elle »,
+et un échec ne dit alors plus laquelle. Avec `--mail`, le worker envoie **depuis son propre
+processus** — la combinaison qui compte ici, puisqu'un worker qui tourne mais ne joint pas le
+SMTP ne délivre rien tout en paraissant sain. L'échec d'envoi est capturé et rapporté plutôt
+que relancé : c'est la réponse cherchée, pas un incident.
+
+En cas d'échec, la commande énumère les trois causes par fréquence — pas de worker, worker sur
+une autre file, worker exécutant l'ancien code faute de `queue:restart` au déploiement.
+Vérifiée dans les deux sens : sans worker elle échoue, avec un worker elle passe en 2,0 s.
+
+**`php artisan admin:create [email]`.** Le mot de passe est demandé **interactivement**, jamais
+en argument : une ligne de commande atterrit dans l'historique du shell et dans la liste des
+processus, lisible par tout autre compte de la machine.
+
+Le point non évident est ailleurs : le compte est créé avec **`teacher_id` à `null`**, et c'est
+indispensable. `RedirectIfAuthenticated` teste la présence d'une fiche enseignant **avant** le
+type admin (D-56), donc un administrateur en portant une serait renvoyé dans l'espace
+enseignant et n'atteindrait **jamais** l'administration. Un test vérifie explicitement que le
+compte créé arrive bien sur `admin.classes`.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
