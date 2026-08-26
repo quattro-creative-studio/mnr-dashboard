@@ -182,4 +182,74 @@ class AdminInvitationTest extends TestCase
 
         $this->assertSame(1, User::where('type', User::TYPE_ADMIN)->count());
     }
+
+    /**
+     * The users list has to distinguish an account still waiting for its
+     * invitation from an active one. It cannot read the password column: an
+     * invited account already has one, a random string nobody knows.
+     */
+    public function testAnInvitedAccountIsMarkedPendingUntilItsPasswordIsChosen()
+    {
+        Mail::fake();
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.users.add.post'), ['email' => 'nouveau@missionnichtrauchen.lu']);
+
+        $invited = User::where('email', 'nouveau@missionnichtrauchen.lu')->firstOrFail();
+
+        $this->assertNull($invited->password_set_at, 'An unactivated account looks active.');
+
+        $token = Password::broker('invitations')->createToken($invited);
+        Auth::logout();
+        $this->flushSession();
+
+        $this->post(route('login.password.reset.post'), [
+            'token' => $token,
+            'email' => $invited->email,
+            'password' => 'mon-mot-de-passe',
+            'password_confirmation' => 'mon-mot-de-passe',
+        ]);
+
+        $this->assertNotNull(
+            $invited->fresh()->password_set_at,
+            'Choosing a password did not mark the account active.'
+        );
+    }
+
+    public function testATeacherRegisteringIsActiveImmediately()
+    {
+        // A teacher types their own password at registration, so they are never
+        // in the pending state an invitation creates.
+        $teacher = $this->makeTeacher();
+
+        $this->assertNotNull($teacher->user->fresh()->password_set_at);
+    }
+
+    /**
+     * Resending is never blocked. For a pending account it repeats the
+     * invitation; for an active one it sends a fresh set-password link, which
+     * takes nothing away -- the current password keeps working until the link
+     * is used.
+     */
+    public function testResendingToAnActiveAccountLeavesItsPasswordWorking()
+    {
+        Mail::fake();
+
+        $active = $this->admin('actif@missionnichtrauchen.lu');
+        $active->forceFill([
+            'password' => Hash::make('mot-de-passe-actuel'),
+            'password_set_at' => now(),
+        ])->save();
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.users.resend', [$active]))
+            ->assertRedirect(route('admin.users'));
+
+        Mail::assertQueued(AdminInvitationMail::class);
+
+        $this->assertTrue(
+            Hash::check('mot-de-passe-actuel', $active->fresh()->password),
+            'Re-sending a link invalidated the existing password.'
+        );
+    }
 }

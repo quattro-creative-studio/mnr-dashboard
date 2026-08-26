@@ -1266,6 +1266,44 @@ teste la fiche enseignant avant le type admin.
 
 ---
 
+### D-65 · État d'activation, et pourquoi « renvoyer » n'est pas désactivé
+**Question posée en recette :** faut-il désactiver le bouton de renvoi sur un compte actif ?
+Réponse honnête : ce n'était pas un choix délibéré. Mais le désactiver serait le mauvais
+correctif — et l'appliquer demandait d'abord de pouvoir **savoir** qu'un compte est actif, ce
+qui était impossible.
+
+**Le mot de passe ne dit rien.** Un compte invité en a déjà un : l'aléatoire de 64 caractères
+posé à la création. La colonne ne distingue donc pas une invitation en attente d'un compte
+actif. Migration `password_set_at`, horodatée **au moment où un humain choisit son mot de
+passe** — formulaire de reset (fin de parcours d'une invitation) et inscription enseignant.
+
+`email_verified_at` existe et n'est **jamais utilisé** par l'application. Non réutilisé
+malgré tout : son nom signifie autre chose en Laravel, le détourner tromperait le prochain
+lecteur.
+
+**Backfill à la migration.** Tout compte existant a démonstrativement un mot de passe qui
+fonctionne ; sans ce remplissage, l'import de production afficherait tous les administrateurs
+comme « en attente ».
+
+**Le bouton reste actif, délibérément cette fois.** Sur un compte en attente il renvoie
+l'invitation ; sur un compte actif il envoie un lien de réinitialisation — chose légitime à
+vouloir, et qui **ne retire rien** : le mot de passe courant reste valable tant que le lien
+n'est pas utilisé. Un test le vérifie. Seul le **libellé** change, pour que le bouton ne mente
+jamais sur ce qu'il fait. La liste affiche désormais *actif depuis le …* ou *invitation en
+attente*.
+
+**Deux erreurs de ma part en chemin :**
+
+- **`parent::` ne pointe pas vers un trait.** J'ai surchargé `resetPassword()` dans
+  `ResetPasswordController` en appelant `parent::resetPassword()` — or un trait est aplati
+  dans la classe, donc `parent::` cherchait dans `Controller`, qui n'a pas cette méthode. Il
+  faut aliaser : `use ResetsPasswords { resetPassword as traitResetPassword; }`.
+- **La factory `User` ne posait pas la colonne**, ce qui faisait apparaître tout utilisateur
+  de test comme non activé. Un compte de factory représente un compte dont quelqu'un se sert :
+  il est actif.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés

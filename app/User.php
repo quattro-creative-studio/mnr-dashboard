@@ -44,7 +44,7 @@ class User extends Authenticatable {
      * @var array
      */
     protected $fillable = [
-        'email', 'password', 'type'
+        'email', 'password', 'password_set_at', 'type'
     ];
 
     /**
@@ -52,6 +52,13 @@ class User extends Authenticatable {
      *
      * @var array
      */
+    /**
+     * Cast so the users list can format it; without this it is a raw string.
+     */
+    protected $casts = [
+        'password_set_at' => 'datetime',
+    ];
+
     protected $hidden = [
         'password', 'remember_token',
     ];
@@ -90,10 +97,20 @@ class User extends Authenticatable {
         ]);
     }
 
+    /**
+     * Create a user from a password its owner chose.
+     *
+     * password_set_at is stamped here because this path is only used where a
+     * human typed the password: teacher registration. An invited administrator
+     * goes the other way -- a random password, then the reset form -- and the
+     * column stays null until they arrive there, which is what the users list
+     * reads to tell a pending invitation from an active account.
+     */
     public static function createUser($email, $password, $type) {
         return static::create([
             'email' => $email,
             'password' => \Hash::make($password),
+            'password_set_at' => now(),
             'type' => $type,
         ]);
     }

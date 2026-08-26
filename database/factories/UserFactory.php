@@ -18,6 +18,9 @@ class UserFactory extends Factory
             // bcrypt('secret')
             'password' => '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm',
             'remember_token' => Str::random(10),
+            // A factory user stands for an account someone already uses, so it
+            // is active. Only an invited administrator is pending.
+            'password_set_at' => now(),
             'type' => User::TYPE_TEACHER,
             'teacher_id' => Teacher::factory(),
         ];

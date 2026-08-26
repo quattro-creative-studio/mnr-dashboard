@@ -41,6 +41,7 @@
             <thead>
             <tr>
                 <th>E-mail</th>
+                <th>État</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -54,9 +55,25 @@
                         @endif
                     </td>
                     <td class="text-nowrap">
+                        @if($user->password_set_at)
+                            <span class="badge badge-success">actif</span>
+                            <span class="text-secondary ml-1">depuis le {{ $user->password_set_at->format('d/m/Y') }}</span>
+                        @else
+                            <span class="badge badge-warning">invitation en attente</span>
+                        @endif
+                    </td>
+                    <td class="text-nowrap">
+                        {{-- Deliberately never disabled. For a pending account it
+                             re-sends the invitation; for an active one it sends a
+                             fresh set-password link, which is a legitimate thing to
+                             need and takes nothing away -- the existing password
+                             keeps working until the link is used. Only the wording
+                             changes, so the button never lies about what it does. --}}
                         <x-action-button :action="route('admin.users.resend', [$user])"
-                                         confirm="Renvoyer une invitation à {{ $user->email }} ?"
-                                         title="Renvoyer l'invitation">
+                                         :confirm="$user->password_set_at
+                                            ? 'Envoyer un lien de réinitialisation à '.$user->email.' ? Son mot de passe actuel reste valable.'
+                                            : 'Renvoyer l\'invitation à '.$user->email.' ?'"
+                                         :title="$user->password_set_at ? 'Envoyer un lien de réinitialisation' : 'Renvoyer l\'invitation'">
                             <i class="fa fa-fw fa-envelope"></i>
                         </x-action-button>
                         {{-- Deleting yourself, or the last administrator, is
