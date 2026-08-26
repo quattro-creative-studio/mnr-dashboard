@@ -71,10 +71,15 @@ trait BuildsDomainFixtures
 
     protected function makeQuizAssignment(SchoolClass $class, int $seed = 0): QuizAssignment
     {
+        // closes_at is nullable in the schema but never null in practice: both
+        // admin forms validate it as required. Leaving it unset here produced
+        // 500s in five views that the application itself cannot reach, which
+        // would have been a fixture artefact reported as a bug.
         $quiz = Quiz::create([
             'name' => "Quiz {$seed}",
             'email_text' => 'Texte du quiz',
             'max_score' => 10,
+            'closes_at' => Carbon::now()->addMonth(),
         ]);
 
         return QuizAssignment::create([

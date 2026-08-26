@@ -1149,6 +1149,45 @@ régression précise. Vérifié en échec sur le code d'avant.
 
 ---
 
+### D-62 · Les routes GET, ouvertes avec des données derrière
+**Suite de D-61.** Couverture des routes GET portée de **8/67 à 40/67**, en deux tests
+complémentaires : `AdminPagesRenderTest` ouvre les pages sur base **vide**,
+`GetRoutesRenderTest` les ouvre **avec** une classe, un quiz, un document, un certificat et un
+groupe de fête. Les deux moitiés comptent — `/admin/quiz` est parfaitement heureux tant que la
+table est vide et meurt sur la première ligne.
+
+**Méthode : un balayage jetable d'abord, les tests ensuite.** Une sonde a appelé toutes les
+routes GET et listé les non-200. Trois faux positifs, tous instructifs :
+
+- **Cinq 500 dus à `closes_at` à `null`** — *ma fixture*, pas l'application. `Quiz::create`
+  dans le trait omettait la date, que les deux formulaires admin valident comme obligatoire.
+  La colonne est `nullable` en base mais jamais nulle en pratique. Corriger la vue aurait été
+  corriger un état que l'application ne sait pas produire.
+- **Trois 404 « No query results for SchoolClass 1 »** — la sonde appelait les routes de
+  **suppression**, qui sont en GET, et détruisait ses propres fixtures avant d'atteindre les
+  pages suivantes.
+- **Deux exceptions sur les exports** — `StreamedResponse` n'a pas de `status()`.
+
+**Aucune panne applicative nouvelle.** C'est le résultat honnête : D-61 était bien le défaut,
+et le reste tient debout une fois les fixtures correctes.
+
+**Mais le balayage a mis au jour autre chose.** Douze routes **GET** changent l'état ou
+envoient du courrier : suppression de classe, de quiz, de document, de certificat, et
+`admin.quiz.send`, `send-reminder`, `admin.certificates.send`, `admin.classes.resend`. Un
+préchargement de navigateur, un robot d'indexation ou une URL mal tapée les exécute, et **GET
+est exempt de CSRF par conception**. Un GET qui écrit à tous les enseignants est plus grave
+qu'un GET qui supprime.
+
+Les passer en POST touche toutes les vues qui les référencent : c'est une décision, pas un
+détail à glisser dans une passe de tests. `testDestructiveActionsAreReachableByGet` **fige la
+liste actuelle** pour que le jour où quelqu'un la corrige, le test le dise.
+
+**Détail de fixture consigné :** plusieurs pages enseignant sont fermées par les
+`EditableDate` et redirigent en 302. Sans ouvrir ces fenêtres, le test serait passé sur une
+assertion plus faible en laissant la vue non exercée.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
