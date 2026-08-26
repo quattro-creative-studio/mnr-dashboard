@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Quiz;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -288,10 +289,19 @@ class DeployCheck extends Command {
             $connection.($connection === 'sync' ? ' — envoi synchrone, pas de worker' : '')
         );
 
-        if ($connection !== 'database') {
-            return;
+        if ($connection === 'database') {
+            $this->checkDatabaseQueueDepth();
+        } elseif ($connection === 'redis') {
+            $this->checkRedisQueueDepth();
         }
 
+        // Failed jobs land in MySQL whatever the queue driver is, and they are
+        // silent losses: CustomEmail marks a message sent in its constructor,
+        // so the ledger will not let a failed send be retried.
+        $this->checkFailedJobs();
+    }
+
+    private function checkDatabaseQueueDepth(): void {
         try {
             $pending = DB::table('jobs')->count();
             $oldest = DB::table('jobs')->min('created_at');
@@ -305,16 +315,63 @@ class DeployCheck extends Command {
                         $pending, now()->createFromTimestamp($oldest)->diffForHumans())
                     : sprintf('%d job(s) en attente, aucun bloqué', $pending)
             );
-
-            $failed = DB::table('failed_jobs')->count();
-            $this->add(
-                'Jobs en échec',
-                $failed > 0 ? self::WARN : self::OK,
-                $failed > 0 ? $failed.' — table failed_jobs à examiner' : 'aucun'
-            );
         } catch (Throwable $e) {
             $this->add('Worker de queue', self::WARN, 'tables jobs illisibles');
         }
+    }
+
+    /**
+     * Redis carries no push timestamp, so queue depth is all there is to read.
+     * Reported as such rather than dressed up as a liveness proof.
+     */
+    private function checkRedisQueueDepth(): void {
+        $name = config('queue.connections.redis.queue', 'default');
+
+        try {
+            $redis = Redis::connection(config('queue.connections.redis.connection') ?: 'default');
+            $redis->ping();
+        } catch (Throwable $e) {
+            $this->add('Redis', self::FAIL, 'injoignable : '.$e->getMessage());
+
+            return;
+        }
+
+        $this->add('Redis', self::OK, 'joignable');
+
+        try {
+            $pending = (int) $redis->llen('queues:'.$name)
+                + (int) $redis->zcard('queues:'.$name.':delayed')
+                + (int) $redis->zcard('queues:'.$name.':reserved');
+        } catch (Throwable $e) {
+            $this->add('Worker de queue', self::WARN, 'profondeur de file illisible');
+
+            return;
+        }
+
+        $this->add(
+            'Worker de queue',
+            $pending > 0 ? self::WARN : self::OK,
+            $pending > 0
+                ? $pending.' job(s) en attente — un worker actif vide la file en quelques '
+                    .'secondes, donc relancer pour voir si le nombre descend'
+                : 'file vide'
+        );
+    }
+
+    private function checkFailedJobs(): void {
+        try {
+            $failed = DB::table('failed_jobs')->count();
+        } catch (Throwable $e) {
+            $this->add('Jobs en échec', self::WARN, 'table failed_jobs illisible');
+
+            return;
+        }
+
+        $this->add(
+            'Jobs en échec',
+            $failed > 0 ? self::WARN : self::OK,
+            $failed > 0 ? $failed.' — perte silencieuse : le registre les croit envoyés' : 'aucun'
+        );
     }
 
     private function checkScheduler(): void {

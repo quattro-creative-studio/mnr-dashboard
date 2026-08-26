@@ -1026,6 +1026,37 @@ existants ; la branche « périmé » a été vérifiée à la main, ci-dessus.
 
 ---
 
+### D-58 · Queue sur Redis — et l'angle mort que ça révélait
+**Staging passe en `QUEUE_CONNECTION=redis`.** Deux conséquences.
+
+**La configuration est correcte telle quelle.** `config/database.php` déclare
+`'client' => env('REDIS_CLIENT', 'phpredis')`, et `predis` a été retiré au hop 3 (D-05) :
+`phpredis` est donc la seule valeur qui fonctionne. **Ne pas surcharger `REDIS_CLIENT`** —
+une valeur `predis` casserait toute la file sans que rien ne l'explique.
+
+**Le défaut était dans `deploy:check`.** `checkQueue()` sortait immédiatement dès que la
+connexion n'était pas `database` — donc sur Redis, **ni contrôle du worker, ni contrôle des
+jobs en échec**. La commande affichait un bilan vert alors qu'elle n'avait rien vérifié.
+Exactement le mode de panne qu'elle existe pour attraper, dans la commande elle-même.
+
+Trois contrôles désormais :
+
+- **Redis joignable** — un `ping()`. C'est la panne la plus probable, et la plus totale.
+- **Profondeur de file** — Redis ne porte aucun horodatage de mise en file, donc l'âge du plus
+  ancien job est illisible. Rapporté comme tel plutôt que déguisé en preuve de vitalité :
+  un worker actif vide la file en quelques secondes, il suffit de relancer pour voir le
+  nombre descendre.
+- **Jobs en échec** — sorti de la branche `database`, il s'exécute maintenant quel que soit
+  le driver, puisque `failed_jobs` reste en MySQL (`config/queue.php`). Ce sont des **pertes
+  silencieuses** : le constructeur de `CustomEmail` marque le mail comme envoyé, donc le
+  registre interdira tout renvoi.
+
+**Rappel opérationnel Forge** : worker et ordonnanceur sont deux mécanismes distincts — le
+scheduler *met en file*, le worker *envoie*. Et `php artisan queue:restart` doit figurer dans
+le script de déploiement : un worker est un processus long qui garde l'ancien code en mémoire.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés

@@ -132,4 +132,49 @@ class DeployCheckTest extends TestCase
 
         $this->artisan('deploy:check')->assertExitCode(1);
     }
+
+    /**
+     * The whole point of the Redis branch. Before it existed, deploy:check
+     * returned early for any driver other than "database", so a Redis queue
+     * got no worker check and no failed-job check at all -- and reported a
+     * clean bill of health while nothing was being processed.
+     */
+    public function testAnUnreachableRedisFailsTheCheck()
+    {
+        $this->configureAsProduction([
+            'queue.default' => 'redis',
+            // A port nothing listens on, so the connection is refused rather
+            // than hanging.
+            'database.redis.default' => [
+                'host' => '127.0.0.1',
+                'port' => 6399,
+                'database' => 0,
+            ],
+        ]);
+
+        $this->artisan('deploy:check')->assertExitCode(1);
+    }
+
+    /**
+     * Failed jobs are silent losses whatever the driver: CustomEmail marks a
+     * message sent in its constructor, so the ledger will not allow a retry.
+     */
+    public function testFailedJobsAreReportedOnARedisQueueToo()
+    {
+        $this->configureAsProduction(['queue.default' => 'redis']);
+
+        \DB::table('failed_jobs')->insert([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'connection' => 'redis',
+            'queue' => 'default',
+            'payload' => '{}',
+            'exception' => 'test',
+            'failed_at' => now(),
+        ]);
+
+        // A warning, not a failure, so this asserts the row is present rather
+        // than the exit code.
+        $this->artisan('deploy:check')
+            ->expectsOutputToContain('perte silencieuse');
+    }
 }
