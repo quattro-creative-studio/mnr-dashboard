@@ -117,11 +117,20 @@
                 <div class="col-12">
                     <input type="submit" class="btn btn-primary btn-lg" value="Valider l'inscription">
                     @if($groups->count() > 0)
-                        <a href="{{ route('teacher.party.class.delete', [$class]) }}" class="btn btn-lg btn-danger ml-4">Supprimer &laquo; {{ $class->name }} &raquo;</a>
+                        {{-- See admin/party-edit: the form lives outside the
+                             registration form, which cannot legally contain it. --}}
+                        <button type="submit" form="delete-party-class" class="btn btn-lg btn-danger ml-4">Supprimer &laquo; {{ $class->name }} &raquo;</button>
                     @endif
                 </div>
             </div>
         @endif
+    </form>
+
+    <form id="delete-party-class" method="POST"
+          action="{{ route('teacher.party.class.delete', [$class]) }}"
+          onsubmit="return confirm('Supprimer l\'inscription de « {{ $class->name }} » ?')">
+        @csrf
+        @method('DELETE')
     </form>
 
 

@@ -105,9 +105,18 @@
         <div class="row">
             <div class="col-12">
                 <input type="submit" class="btn btn-primary btn-lg" value="Valider l'inscription">
-                <a href="{{ route('admin.party.class.delete', [$class]) }}" class="btn btn-lg btn-danger ml-4">Supprimer &laquo; {{ $class->name }} &raquo;</a>
+                {{-- Points at the form below, which sits outside the registration
+                     form: nesting one form inside another is invalid HTML. --}}
+                <button type="submit" form="delete-party-class" class="btn btn-lg btn-danger ml-4">Supprimer &laquo; {{ $class->name }} &raquo;</button>
             </div>
         </div>
+    </form>
+
+    <form id="delete-party-class" method="POST"
+          action="{{ route('admin.party.class.delete', [$class]) }}"
+          onsubmit="return confirm('Supprimer l\'inscription de « {{ $class->name }} » ?')">
+        @csrf
+        @method('DELETE')
     </form>
 
 

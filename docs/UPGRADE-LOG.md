@@ -1188,6 +1188,43 @@ assertion plus faible en laissant la vue non exercée.
 
 ---
 
+### D-63 · Les treize routes destructives passent en POST/DELETE
+**Décision prise après D-62.** Supprimer une classe, un quiz, un document, un certificat, et
+**écrire à tous les enseignants éligibles**, se faisaient toutes en `GET`. Un préchargement de
+navigateur, un robot d'indexation ou une URL mal tapée les exécutait, et **GET est exempt de
+CSRF par conception**.
+
+Verbes retenus : **DELETE** pour les six suppressions, **POST** pour les sept actions
+(`send`, `send-reminder`, `resend`, les trois `generate`, `certificates.send`).
+
+**Un composant plutôt que treize conversions à la main.** `<x-action-button>` rend un
+formulaire inline avec jeton CSRF, verbe, variante Bootstrap, confirmation optionnelle et état
+désactivé — ce dernier remplace l'idiome `href="#"` accompagné d'une classe `disabled`, qui
+laissait le lien cliquable.
+
+**Trois cas ont demandé un traitement particulier :**
+
+- **Formulaires imbriqués.** Dans `admin/party-edit` et `teacher/party-class`, le bouton de
+  suppression se trouvait **à l'intérieur** du formulaire d'inscription. Un `<form>` dans un
+  `<form>` est du HTML invalide. Le formulaire de suppression vit désormais après le
+  formulaire parent, et le bouton le désigne par l'attribut HTML5 `form`.
+- **Modales JS.** `admin/classes` et `admin/quiz` construisaient l'URL de suppression en
+  JavaScript et l'injectaient dans un `href`. La modale servait déjà de confirmation ; le lien
+  devient un bouton de soumission et le script renseigne l'`action` du formulaire.
+- **Téléchargements et exports** gardent `GET` : ils lisent, sont répétables sans effet, et
+  un préchargement est sans conséquence.
+
+**Le test est retourné, pas supprimé.** `testDestructiveActionsAreReachableByGet` figeait la
+liste ; il devient `testNothingThatChangesStateIsReachableByGet`, qui affirme la **propriété**
+plutôt qu'une liste — une route ajoutée demain est attrapée. Deux tests supplémentaires
+vérifient que l'ancienne URL en GET renvoie **405 sans rien supprimer**, et que la suppression
+fonctionne toujours avec le bon verbe.
+
+**Vérifié dans le navigateur :** sur `/admin/certificates`, onze formulaires, tous avec jeton
+CSRF, les bons verbes, confirmation sur les actions destructives, et aucun lien GET restant.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés

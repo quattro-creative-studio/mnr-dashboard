@@ -21,18 +21,19 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12 col-xl-6">
-                            <a class="btn btn-primary btn-block" href="{{ route('admin.certificates.generate.all') }}">
+                            <x-action-button :action="route('admin.certificates.generate.all')"
+                                             confirm="Régénérer les certificats de toutes les classes éligibles ?">
                                 <i class="fa fa-refresh"></i> Générer tous les certificats
-                            </a>
+                            </x-action-button>
                             <br>
                             Génère des certificats pour toutes les classes éligibles, même si elles ont déjà un certificat.
                             <hr class="d-block d-xl-none">
                         </div>
                         <div class="col-12 col-xl-6">
-                            <a class="btn btn-primary btn-block {{ $eligibleMissing->count() == 0 ? 'disabled' : '' }}"
-                               href="{{ route('admin.certificates.generate.missing') }}">
+                            <x-action-button :action="route('admin.certificates.generate.missing')"
+                                             :disabled="$eligibleMissing->count() == 0">
                                 <i class="fa fa-refresh"></i> Générer certificats manquants
-                            </a>
+                            </x-action-button>
                             <br>
                             <p {{ $eligibleMissing->count() > 0 ? 'hidden' : '' }}>
                                 Toutes les classes ont un certificat.
@@ -59,9 +60,10 @@
                     Envoyer les Certificats
                 </div>
                 <div class="card-body">
-                    <a href="{{route('admin.certificates.send')}}" class="btn btn-primary">
+                    <x-action-button :action="route('admin.certificates.send')"
+                                     confirm="Envoyer les certificats par mail à tous les enseignants éligibles ?">
                         <i class="fa fa-fw fa-envelope"></i>
-                    </a>
+                    </x-action-button>
                     <span class="ml-2">Envoyer les certificats par mail a tous les enseignants éligibles</span>
                 </div>
             </div>
@@ -103,12 +105,14 @@
                                class="btn btn-info text-white {{ !$cert ? 'disabled' : '' }}">
                                 <i class="fa fa-fw fa-eye"></i>
                             </a>
-                            <a href="{{ route('admin.certificates.generate', [$class]) }}" class="btn btn-primary">
+                            <x-action-button :action="route('admin.certificates.generate', [$class])">
                                 <i class="fa fa-fw fa-refresh"></i>
-                            </a>
-                            <a href="{{ $cert ? route('admin.certificates.delete', [$class->certificate]) : '#' }}" class="btn btn-danger {{ !$cert ? 'disabled' : '' }}">
+                            </x-action-button>
+                            <x-action-button :action="$cert ? route('admin.certificates.delete', [$class->certificate]) : '#'"
+                                             method="DELETE" variant="danger" :disabled="! $cert"
+                                             confirm="Supprimer ce certificat ?">
                                 <i class="fa fa-fw fa-trash-o"></i>
-                            </a>
+                            </x-action-button>
                         </div>
                     </td>
                 </tr>

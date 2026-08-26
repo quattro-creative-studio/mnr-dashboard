@@ -201,19 +201,20 @@ class GetRoutesRenderTest extends TestCase
     }
 
     /**
-     * Not a failure to fix here, but a finding worth pinning: deleting a class,
-     * a quiz, a document or a certificate, and sending mail to every eligible
-     * class, are all plain GET routes. A browser prefetch, a crawler or a
-     * mistyped URL performs them; they carry no CSRF token because GET is
-     * exempt by design.
+     * Guard: nothing that changes state may be reachable by GET.
      *
-     * Changing them to POST touches every view that links to them, so it is a
-     * deliberate decision rather than something to slip into a test run. This
-     * asserts the current shape so the day someone fixes it, the test says so.
+     * Twelve routes used to be: deleting a class, a quiz, a document or a
+     * certificate, and sending mail to every eligible class. A browser
+     * prefetch, a crawler or a mistyped URL performs a GET, and GET carries no
+     * CSRF token because it is exempt by design. A GET that mails every
+     * teacher is worse than a GET that deletes one row.
+     *
+     * They are now POST (actions) and DELETE (removals). This asserts the
+     * property rather than a list, so a new one added tomorrow is caught.
      */
-    public function testDestructiveActionsAreReachableByGet()
+    public function testNothingThatChangesStateIsReachableByGet()
     {
-        $destructive = [];
+        $offenders = [];
 
         foreach (app('router')->getRoutes() as $route) {
             $name = (string) $route->getName();
@@ -222,30 +223,55 @@ class GetRoutesRenderTest extends TestCase
                 continue;
             }
 
-            if (preg_match('/\.(delete|send|resend|generate)/', $name)) {
-                $destructive[] = $name;
+            // Downloads and exports read; they are safe to repeat and safe to
+            // prefetch, so the verb is right.
+            if (preg_match('/\.(delete|send|resend|generate)/', $name)
+                && ! str_contains($name, 'download')
+                && ! str_contains($name, 'export')) {
+                $offenders[] = $name.' ['.$route->uri().']';
             }
         }
 
-        sort($destructive);
+        sort($offenders);
 
-        $this->assertSame([
-            'admin.certificates.delete',
-            'admin.certificates.generate',
-            'admin.certificates.generate.all',
-            'admin.certificates.generate.missing',
-            'admin.certificates.send',
-            'admin.classes.delete',
-            'admin.classes.resend',
-            'admin.documents.delete',
-            'admin.party.class.delete',
-            'admin.quiz.delete',
-            'admin.quiz.send',
-            'admin.quiz.send-reminder',
-            'teacher.party.class.delete',
-        ], $destructive, 'The set of state-changing GET routes changed. If they '
-            .'moved to POST, delete this test; if new ones appeared, they carry '
-            .'the same exposure.');
+        $this->assertSame(
+            [],
+            $offenders,
+            "These routes change state or send mail but answer a GET:\n  "
+            .implode("\n  ", $offenders)
+            ."\nUse POST for actions and DELETE for removals, and render the "
+            .'link with <x-action-button> so it carries a CSRF token.'
+        );
+    }
+
+    /**
+     * The verb change is only real if the old one stops working.
+     */
+    public function testTheOldGetUrlsNoLongerPerformTheAction()
+    {
+        $fixtures = $this->seedContest();
+        $class = $fixtures['class'];
+
+        $this->actingAs($this->admin())
+            ->get('/admin/classes/'.$class->id.'/delete')
+            ->assertStatus(405);
+
+        $this->assertNotNull(
+            SchoolClass::find($class->id),
+            'A GET to the old delete URL still removed the class.'
+        );
+    }
+
+    public function testAClassIsStillDeletableByTheProperVerb()
+    {
+        $fixtures = $this->seedContest();
+        $class = $fixtures['class'];
+
+        $this->actingAs($this->admin())
+            ->delete(route('admin.classes.delete', [$class]))
+            ->assertRedirect();
+
+        $this->assertNull(SchoolClass::find($class->id));
     }
 
     private function argumentsFor(array $needs, array $fixtures): array

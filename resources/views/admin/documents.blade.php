@@ -131,9 +131,11 @@
                         <a href="{{ route('admin.documents.moveDown', [$document]) }}" class="btn btn-info">
                             <i class="fa fa-fw fa-arrow-down text-white"></i>
                         </a>
-                        <a href="{{ route('admin.documents.delete', [$document]) }}" class="btn btn-danger">
+                        <x-action-button :action="route('admin.documents.delete', [$document])"
+                                         method="DELETE" variant="danger"
+                                         confirm="Supprimer ce document ?">
                             <i class="fa fa-fw fa-trash-o text-white"></i>
-                        </a>
+                        </x-action-button>
                     </td>
                 </tr>
                         @endforeach

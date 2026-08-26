@@ -140,9 +140,11 @@
                             class="btn btn-primary text-white">
                             <i class="fa fa-pencil"></i>
                         </a>
-                        <a href="{{ route('admin.party.class.delete', [$group]) }}" class="btn btn-danger text-white">
+                        <x-action-button :action="route('admin.party.class.delete', [$group])"
+                                         method="DELETE" variant="danger"
+                                         confirm="Supprimer ce groupe ?">
                             <i class="fa fa-trash-o"></i>
-                        </a>
+                        </x-action-button>
                     </td>
                 </tr>
             @endforeach

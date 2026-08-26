@@ -112,10 +112,11 @@
             <div class="card">
                 <div class="card-body">
 
-                    <a href="{{ route('admin.quiz.send', [$quiz]) }}" class="btn btn-success btn-lg btn-block">
+                    <x-action-button :action="route('admin.quiz.send', [$quiz])" variant="success"
+                                     confirm="Envoyer ce quiz à toutes les classes assignées ? Cette action est irréversible.">
                         <i class="fa fa-fw fa-paper-plane"></i>
                         Envoyer
-                    </a>
+                    </x-action-button>
 
                 </div>
             </div>

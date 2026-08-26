@@ -45,7 +45,7 @@ Route::group(['middleware' => ['auth', 'teacher']], function () {
     Route::get('/teacher/party', 'TeacherController@party')->name('teacher.party');
     Route::get('/teacher/party/{class}', 'TeacherController@partyClass')->name('teacher.party.class');
     Route::post('/teacher/party/{class}', 'TeacherController@partyClassPost')->name('teacher.party.class.post');
-    Route::get('/teacher/party/{class}/delete', 'TeacherController@deleteParty')->name('teacher.party.class.delete');
+    Route::delete('/teacher/party/{class}/delete', 'TeacherController@deleteParty')->name('teacher.party.class.delete');
     Route::get('/teacher/quizzes', '\App\Http\Controllers\Teachers\QuizIndexController')->name('teacher.quizzes');
 });
 
@@ -59,9 +59,9 @@ Route::get('/certificat/download/{certificate_uid}', 'CertificateController@down
 Route::group(['middleware' => ['auth', 'admin']], function () {;
     Route::group(['namespace' => 'Admin'], function () {
         Route::get('/admin/classes', 'SchoolClassController@classes')->name('admin.classes');
-        Route::get('/admin/classes/resend/{status}', 'SchoolClassController@resend')->name('admin.classes.resend');
+        Route::post('/admin/classes/resend/{status}', 'SchoolClassController@resend')->name('admin.classes.resend');
         Route::get('/admin/classes/export', 'ClassExportController@export')->name('admin.classes.export');
-        Route::get('/admin/classes/{class}/delete', 'SchoolClassController@delete')->name('admin.classes.delete');
+        Route::delete('/admin/classes/{class}/delete', 'SchoolClassController@delete')->name('admin.classes.delete');
         Route::get('/admin/classes/{class}', 'SchoolClassController@classesEdit')->name('admin.classes.edit');
         Route::post('/admin/classes/{class}', 'SchoolClassController@classesEditPost')->name('admin.classes.edit.post');
 
@@ -70,11 +70,11 @@ Route::group(['middleware' => ['auth', 'admin']], function () {;
         Route::post('/admin/schools/{school}', 'SchoolController@schoolsEditPost')->name('admin.schools.edit.post');
 
         Route::get('/admin/certificates', 'CertificateController@index')->name('admin.certificates');
-        Route::get('/admin/certificates/send', 'CertificateController@sendEmail')->name('admin.certificates.send');
-        Route::get('/admin/certificates/generate/all', 'CertificateController@generateAll')->name('admin.certificates.generate.all');
-        Route::get('/admin/certificates/generate/missing', 'CertificateController@generateMissing')->name('admin.certificates.generate.missing');
-        Route::get('/admin/certificates/generate/{class}', 'CertificateController@generate')->name('admin.certificates.generate');
-        Route::get('/admin/certificates/delete/{certificate}', 'CertificateController@delete')->name('admin.certificates.delete');
+        Route::post('/admin/certificates/send', 'CertificateController@sendEmail')->name('admin.certificates.send');
+        Route::post('/admin/certificates/generate/all', 'CertificateController@generateAll')->name('admin.certificates.generate.all');
+        Route::post('/admin/certificates/generate/missing', 'CertificateController@generateMissing')->name('admin.certificates.generate.missing');
+        Route::post('/admin/certificates/generate/{class}', 'CertificateController@generate')->name('admin.certificates.generate');
+        Route::delete('/admin/certificates/delete/{certificate}', 'CertificateController@delete')->name('admin.certificates.delete');
         Route::get('/admin/certificates/{certificate}', 'CertificateController@download')->name('admin.certificates.download');
 
         Route::get('/admin/teachers', 'TeacherController@teachers')->name('admin.teachers');
@@ -94,7 +94,7 @@ Route::group(['middleware' => ['auth', 'admin']], function () {;
         Route::get('/admin/documents/{document}/edit', 'DocumentController@edit')->name('admin.documents.edit');
         Route::post('/admin/documents/{document}/edit', 'DocumentController@editUpdate')->name('admin.documents.update');
         Route::get('/admin/documents/{document}/download', 'DocumentController@documentsDownload')->name('admin.documents.download');
-        Route::get('/admin/documents/{document}/delete', 'DocumentController@documentsDelete')->name('admin.documents.delete');
+        Route::delete('/admin/documents/{document}/delete', 'DocumentController@documentsDelete')->name('admin.documents.delete');
         Route::get('/admin/documents/{document}/moveUp', 'DocumentController@moveUp')->name('admin.documents.moveUp');
         Route::get('/admin/documents/{document}/moveDown', 'DocumentController@moveDown')->name('admin.documents.moveDown');
 
@@ -108,15 +108,15 @@ Route::group(['middleware' => ['auth', 'admin']], function () {;
         Route::post('/admin/quiz/{quiz}/codes', 'QuizController@createCodes')->name('admin.quiz.show.codes.post');
         Route::get('/admin/quiz/{quiz}/review', 'QuizController@review')->name('admin.quiz.review');
         Route::get('/admin/quiz/{quiz}/review-mail', 'QuizController@previewMail')->name('admin.quiz.review-mail');
-        Route::get('/admin/quiz/{quiz}/send', 'QuizController@send')->name('admin.quiz.send');
-        Route::get('/admin/quiz/{quiz}/send-reminder', 'QuizController@sendReminders')->name('admin.quiz.send-reminder');
-        Route::get('/admin/quiz/{quiz}/delete', 'QuizController@delete')->name('admin.quiz.delete');
+        Route::post('/admin/quiz/{quiz}/send', 'QuizController@send')->name('admin.quiz.send');
+        Route::post('/admin/quiz/{quiz}/send-reminder', 'QuizController@sendReminders')->name('admin.quiz.send-reminder');
+        Route::delete('/admin/quiz/{quiz}/delete', 'QuizController@delete')->name('admin.quiz.delete');
 
         Route::get('/admin/party', 'PartyController@party')->name('admin.party');
         Route::get('/admin/party/export', 'PartyExportController@export')->name('admin.party.export');
         Route::get('/admin/party/{class}', 'PartyController@partyClass')->name('admin.party.class');
         Route::post('/admin/party/{class}', 'PartyController@partyClassPost')->name('admin.party.class.post');
-        Route::get('/admin/party/{group}/delete', 'PartyController@deleteGroup')->name('admin.party.class.delete');
+        Route::delete('/admin/party/{group}/delete', 'PartyController@deleteGroup')->name('admin.party.class.delete');
 
         Route::get('/admin/users', 'UserController@users')->name('admin.users');
         Route::get('/admin/users/add', 'UserController@usersAdd')->name('admin.users.add');

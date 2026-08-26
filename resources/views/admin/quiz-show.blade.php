@@ -130,14 +130,16 @@
                                         Revoir et envoyer
                                     </a>
 
-                                    <a class="btn btn-success {{ $quiz->remindableCount() == 0 || $quiz->state !== \App\Quiz::STATE_RUNNING ? 'disabled' : '' }}"
-                                       href="{{ route('admin.quiz.send-reminder', [$quiz]) }}">
+                                    <x-action-button :action="route('admin.quiz.send-reminder', [$quiz])"
+                                                     variant="success"
+                                                     :disabled="$quiz->remindableCount() == 0 || $quiz->state !== \App\Quiz::STATE_RUNNING"
+                                                     confirm="Envoyer un rappel aux classes qui n'ont pas encore répondu ?">
                                         <i class="fa fa-fw fa-clock-o"></i>
                                         Envoyer rappel
                                         @if($quiz->state == \App\Quiz::STATE_RUNNING)
                                             {{ $quiz->remindableCount() > 0 ? sprintf('à %d classes', $quiz->remindableCount()): '' }}
                                         @endif
-                                    </a>
+                                    </x-action-button>
 
                                 </div>
                             </div>

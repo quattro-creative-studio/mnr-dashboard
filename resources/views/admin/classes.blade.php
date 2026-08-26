@@ -27,10 +27,16 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn" data-dismiss="modal">Fermer</button>
-                    <a id="modalDeleteLink" class="btn btn-danger text-white" href="">
-                        <i class="fa fa-trash-o"></i>
-                        Supprimer
-                    </a>
+                    {{-- The modal is already the confirmation step, so this
+                         submits rather than links: deleting must not be a GET. --}}
+                    <form id="modalDeleteForm" method="POST" action="" class="d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger text-white">
+                            <i class="fa fa-trash-o"></i>
+                            Supprimer
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -127,9 +133,10 @@
 {{--                        </span>--}}
 {{--                    @endif--}}
                     @if($show_may)
-                        <a href="{{ route('admin.classes.resend', [\App\SchoolClass::STATUS_MAY]) }}" class="btn btn-primary">
+                        <x-action-button :action="route('admin.classes.resend', [\App\SchoolClass::STATUS_MAY])"
+                                         confirm="Renvoyer le mail de suivi de mai à toutes les classes concernées ?">
                             Mai
-                        </a>
+                        </x-action-button>
                         @else
                         <span class="d-inline-block" tabindex="0" data-toggle="tooltip" data-placement="bottom"
                               title="Sera activé : {{ optional(\App\EditableDate::find(\App\EditableDate::FOLLOW_UP_3))->toDateString() ?? 'date non configurée' }}">
@@ -248,7 +255,7 @@
             var id = $(this).attr('data-delete-id');
             var url = '{{ route('admin.classes.delete', [':id:']) }}';
             $('#modalDeleteTitle').html('Supprimer &laquo; ' + className + ' &raquo; ?');
-            $('#modalDeleteLink').attr('href', url.replace(':id:', id));
+            $('#modalDeleteForm').attr('action', url.replace(':id:', id));
             $('#modalDelete').modal('show');
         });
         $('table').dataTable({

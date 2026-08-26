@@ -23,10 +23,11 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn" data-dismiss="modal">Fermer</button>
-                    <a class="btn btn-danger text-white" href="{{ route('admin.classes.delete', [$class]) }}">
+                    <x-action-button :action="route('admin.classes.delete', [$class])"
+                                     method="DELETE" variant="danger">
                         <i class="fa fa-trash-o"></i>
                         Supprimer
-                    </a>
+                    </x-action-button>
                 </div>
             </div>
         </div>
@@ -232,9 +233,11 @@
                                 <a href="{{ route('admin.party.class', [$group->schoolClass]) }}" class="btn btn-primary text-white">
                                     <i class="fa fa-pencil"></i>
                                 </a>
-                                <a href="{{ route('admin.party.class.delete', [$group]) }}" class="btn btn-danger text-white">
+                                <x-action-button :action="route('admin.party.class.delete', [$group])"
+                                                 method="DELETE" variant="danger"
+                                                 confirm="Supprimer ce groupe ?">
                                     <i class="fa fa-trash-o"></i>
-                                </a>
+                                </x-action-button>
                             </td>
                         </tr>
 

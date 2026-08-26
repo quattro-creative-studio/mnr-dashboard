@@ -34,10 +34,16 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn" data-dismiss="modal">Fermer</button>
-                    <a id="modalDeleteLink" class="btn btn-danger text-white" href="">
-                        <i class="fa fa-trash-o"></i>
-                        Supprimer
-                    </a>
+                    {{-- The modal is already the confirmation step, so this
+                         submits rather than links: deleting must not be a GET. --}}
+                    <form id="modalDeleteForm" method="POST" action="" class="d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger text-white">
+                            <i class="fa fa-trash-o"></i>
+                            Supprimer
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -117,7 +123,7 @@
             var url = '{{ route('admin.quiz.delete', [':id:']) }}';
             $('#modalDeleteTitle').html('Supprimer &laquo; ' + quiz.name + ' &raquo; ?');
             $('#modalDelete .modal-body').text(text);
-            $('#modalDeleteLink').attr('href', url.replace(':id:', quiz.id));
+            $('#modalDeleteForm').attr('action', url.replace(':id:', quiz.id));
             $('#modalDelete').modal('show');
         });
         $('table').dataTable({
