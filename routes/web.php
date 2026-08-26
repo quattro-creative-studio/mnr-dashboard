@@ -84,6 +84,7 @@ Route::group(['middleware' => ['auth', 'admin']], function () {;
         Route::get('/admin/emails', 'EmailController@emails')->name('admin.emails');
         Route::get('/admin/emails/{email}', 'EmailController@emailsEdit')->name('admin.emails.edit');
         Route::post('/admin/emails/{email}', 'EmailController@emailsEditPost')->name('admin.emails.edit.post');
+        Route::post('/admin/emails/{email}/toggle', 'EmailController@toggle')->name('admin.emails.toggle');
 
         Route::get('/admin/dates', 'EditableDateController@index')->name('admin.dates');
         Route::post('/admin/dates', 'EditableDateController@update')->name('admin.dates.post');

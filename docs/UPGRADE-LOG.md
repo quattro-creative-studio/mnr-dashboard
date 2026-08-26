@@ -1344,6 +1344,69 @@ drapeau d'opt-out. Tout le reste est transactionnel (jeton unique par destinatai
 
 ---
 
+### D-66 · Un seul tableau pour les e-mails, et un interrupteur qui existe vraiment
+**Demandé en recette :** `/admin/emails` affichait deux tableaux — les e-mails en haut, les
+dates en bas — qu'il fallait rapprocher de tête. Les données donnent raison à la remarque :
+le pivot apparie les deux listes **1 pour 1**. C'était la même chose montrée deux fois.
+
+**Un e-mail sur trois n'est pourtant pas envoyé par le calendrier.** La fusion ne pouvait pas
+se contenter d'une jointure. Trois modes coexistent, désormais nommés sur le modèle
+(`sendingMode()`) et affichés dans une colonne *État* :
+
+| Mode | Envoi | Interrupteur |
+| --- | --- | --- |
+| `scheduled` | le calendrier, à la date affichée | oui |
+| `transactional` | une action (inscription, réponse, envoi manuel) | non, inerte |
+| `dormant` | rien, cette année | non, inerte |
+
+`teacher_confirmation` illustre le piège : il est relié à *Début inscriptions* dans le pivot,
+donc la page annonçait « date d'envoi 2023-10-02 » alors qu'il part **au moment où
+l'enseignant s'inscrit**. La colonne lit maintenant *à l'inscription*. Le mode `dormant`
+couvre la famille de suivi janvier/mars/mai et les newsletters numérotées : conservées
+volontairement, branchées sur aucun expéditeur. Elles restent listées et modifiables — mais
+sans interrupteur, qu'aucun code ne lirait.
+
+**Désactiver un e-mail : un booléen, pas une date vidée.** La tentation était d'utiliser la
+date comme interrupteur. Trois raisons de ne pas le faire :
+
+- `EditableDate::find()` renvoie `null` sur clé absente et Carbon 3 lève une `TypeError` sur
+  `null` : les neuf portes `$date->isCurrentDay()` étaient un fatal en attente d'une base
+  partiellement peuplée. Corrigé au passage — une date non configurée signifie « non
+  programmé », jamais « envoyer maintenant », comme `hasPassed()` le fait déjà.
+- Vider la date détruit la valeur que l'édition suivante voudra récupérer.
+- Surtout, la désactivation se faisait jusqu'ici **par accident** : la porte est une égalité
+  de jour exacte, donc une date passée ne se redéclenche jamais. Une date périmée et un
+  e-mail délibérément tu étaient indiscernables.
+
+Migration `enabled`, défaut `true` — l'import de production continue d'envoyer exactement ce
+qu'il envoie aujourd'hui.
+
+**Les neuf portes passent par un seul point.** `EditableEmail::readyToSendToday($mail, $date)`
+renvoie l'e-mail s'il doit partir maintenant, `null` sinon (ligne absente, date non
+configurée, mauvais jour, désactivé), et journalise la raison. L'envoi **manuel** depuis
+l'admin reste possible sur un e-mail désactivé : c'est un geste explicite, pas le calendrier
+qui se déclenche.
+
+**Une régression introduite puis rattrapée.** En rangeant chaque date dans la ligne de son
+e-mail, *Début inscriptions* — liée à un e-mail transactionnel, donc sans champ de saisie —
+était devenue **non modifiable**, alors qu'elle pilote `isRegistrationOpen()`. Seules les
+dates des e-mails programmés sont éditées en ligne ; tout le reste tombe dans le bloc
+« Dates du concours ». Un test vérifie que **chaque** date reste saisissable quelque part.
+
+**Détail HTML qui décide de la structure.** Les boutons d'action génèrent un `<form>`, et les
+champs de date doivent poster ensemble : des formulaires imbriqués sont invalides et le
+navigateur supprime l'intérieur. Le formulaire de dates est donc déclaré vide avant le
+tableau, et chaque champ le rejoint par l'attribut HTML5 `form=`. Vérifié dans Chrome :
+22 éléments rattachés, 0 formulaire imbriqué.
+
+**Attention en staging :** une base fraîchement migrée contient **19 e-mails**, pas les 10 de
+la base locale — la famille de suivi et l'encouragement s'y trouvent aussi. La page les
+affichera en *Non utilisé*.
+
+Suite : **212 tests, 504 assertions**. Les nouvelles gardes ont été vérifiées défaillantes
+sur l'ancien code avant d'être conservées.
+
+
 ## 6. À faire avant la production
 
 **`php artisan deploy:check` répond à la majorité de cette liste** (D-53). Sortie non nulle

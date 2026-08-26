@@ -49,10 +49,9 @@ class MailController extends Controller
 
     public function sendFinalMail()
     {
-        $date = EditableDate::find(EditableDate::FINAL_MAIL);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_FINAL);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_FINAL, EditableDate::FINAL_MAIL);
+        if ($mail === null) {
             return;
         }
 
@@ -71,10 +70,9 @@ class MailController extends Controller
 
     public function sendPartyInvite()
     {
-        $date = EditableDate::find(EditableDate::FINAL_INVITATION_PARTY);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_INVITE_PARTY);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_INVITE_PARTY, EditableDate::FINAL_INVITATION_PARTY);
+        if ($mail === null) {
             return;
         }
 
@@ -93,10 +91,9 @@ class MailController extends Controller
 
     public function sendPartyInviteReminder()
     {
-        $date = EditableDate::find(EditableDate::FINAL_INVITATION_PARTY_REMINDER);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_INVITE_PARTY_REMINDER);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_INVITE_PARTY_REMINDER, EditableDate::FINAL_INVITATION_PARTY_REMINDER);
+        if ($mail === null) {
             return;
         }
 
@@ -115,10 +112,9 @@ class MailController extends Controller
 
     public function sendPartyInviteReminderSecond()
     {
-        $date = EditableDate::find(EditableDate::FINAL_INVITATION_PARTY_REMINDER_SECOND);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_INVITE_PARTY_REMINDER_SECOND);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_INVITE_PARTY_REMINDER_SECOND, EditableDate::FINAL_INVITATION_PARTY_REMINDER_SECOND);
+        if ($mail === null) {
             return;
         }
 
@@ -137,10 +133,9 @@ class MailController extends Controller
 
     public function sendPartyInviteJ2()
     {
-        $date = EditableDate::find(EditableDate::FINAL_INVITATION_PARTY_J_2);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_INVITE_PARTY_J_2);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_INVITE_PARTY_J_2, EditableDate::FINAL_INVITATION_PARTY_J_2);
+        if ($mail === null) {
             return;
         }
 
@@ -159,10 +154,9 @@ class MailController extends Controller
 
     public function sendPartyInformations()
     {
-        $date = EditableDate::find(EditableDate::FINAL_INVITATION_PARTY_INFORMATIONS);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_INVITATION_PARTY_INFORMATIONS);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_INVITATION_PARTY_INFORMATIONS, EditableDate::FINAL_INVITATION_PARTY_INFORMATIONS);
+        if ($mail === null) {
             return;
         }
 
@@ -181,10 +175,9 @@ class MailController extends Controller
 
     public function sendNewEducationalTool()
     {
-        $date = EditableDate::find(EditableDate::NEW_EDUCATIONAL_TOOL);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_NEW_EDUCATIONAL_TOOL);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_NEW_EDUCATIONAL_TOOL, EditableDate::NEW_EDUCATIONAL_TOOL);
+        if ($mail === null) {
             return;
         }
 
@@ -203,10 +196,9 @@ class MailController extends Controller
 
     public function sendEndYearCommunicationEmail()
     {
-        $date = EditableDate::find(EditableDate::END_YEAR_COMMUNICATION_EMAIL);
-        $mail = EditableEmail::find(EditableEmail::$MAIL_END_YEAR_COMMUNICATION);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday(EditableEmail::$MAIL_END_YEAR_COMMUNICATION, EditableDate::END_YEAR_COMMUNICATION_EMAIL);
+        if ($mail === null) {
             return;
         }
 

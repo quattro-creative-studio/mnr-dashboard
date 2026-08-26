@@ -31,10 +31,9 @@ class NewsletterController extends Controller {
     }
 
     private function send(Collection $teachers, string $dateIdentifier, array $mailIdentifier) {
-        $date = EditableDate::find($dateIdentifier);
-        $mail = EditableEmail::find($mailIdentifier);
-        // is start date today?
-        if (!$date->isCurrentDay()) {
+        // Due today, and not switched off for this edition?
+        $mail = EditableEmail::readyToSendToday($mailIdentifier, $dateIdentifier);
+        if ($mail === null) {
             return;
         }
 

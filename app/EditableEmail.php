@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -16,6 +17,7 @@ use Illuminate\Support\Str;
  * @property string title
  * @property string text
  * @property string subject
+ * @property bool enabled
  * @property Collection dates
  * @property Collection sentEmails
  * @property Carbon created_at
@@ -25,7 +27,9 @@ use Illuminate\Support\Str;
  */
 class EditableEmail extends Model {
 
-    protected $fillable = ['key', 'title', 'text', 'subject', 'sort_order'];
+    protected $fillable = ['key', 'title', 'text', 'subject', 'enabled', 'sort_order'];
+
+    protected $casts = ['enabled' => 'boolean'];
 
     protected $appends = ['dates_string'];
 
@@ -99,6 +103,145 @@ class EditableEmail extends Model {
             static::$MAIL_NEWSLETTER_1,
             static::$MAIL_NEWSLETTER_2,
         ]);
+    }
+
+    /**
+     * How a mail leaves the application. Every mail is exactly one of these,
+     * and the admin list draws its "État" column from it.
+     */
+    const MODE_SCHEDULED = 'scheduled';
+    const MODE_TRANSACTIONAL = 'transactional';
+    const MODE_DORMANT = 'dormant';
+
+    /**
+     * Mails the calendar never sends: a teacher's or an administrator's action
+     * triggers them, one recipient at a time.
+     *
+     *   teacher_confirmation      TeacherRegisterController, on registration
+     *   follow_up_*_yes / _no     EmailRepository, on a follow-up answer
+     *   party_confirmation_no     EmailRepository, on a party refusal
+     *   party_group_reminder      PartyController, per class from the admin
+     *   final_certificat          sent with the certificate, not on a date
+     *
+     * The pivot is no help in telling these apart -- teacher_confirmation is
+     * linked to "Début inscriptions" purely so the admin list has a heading --
+     * so the list is explicit.
+     */
+    public static $TRANSACTIONAL_KEYS = [
+        'teacher_confirmation',
+        'follow_up_1_yes',
+        'follow_up_1_no',
+        'follow_up_2_yes',
+        'follow_up_2_no',
+        'follow_up_3_no',
+        'party_confirmation_no',
+        'party_group_reminder',
+        'final_certificat',
+    ];
+
+    /**
+     * Mails no code path currently sends.
+     *
+     * The January/March/May follow-up mechanism is deliberately switched off
+     * but kept -- send:followup is unscheduled and SendFollowUpEmails is not
+     * wired to anything -- because it gets toggled back on between contest
+     * years. The encouragement and numbered newsletters are in the same state:
+     * their sendNewsletters() calls are commented out.
+     *
+     * They are listed rather than hidden: an administrator who edits their text
+     * needs to know it will not go anywhere this year. Offering an on/off switch
+     * on them would be a lie -- there is no sender to obey it.
+     */
+    public static $DORMANT_KEYS = [
+        'follow_up_1',
+        'follow_up_1_reminder',
+        'follow_up_2',
+        'follow_up_2_reminder',
+        'follow_up_3',
+        'follow_up_3_reminder',
+        'newsletter_encouragement',
+        'newsletter_1',
+        'newsletter_2',
+    ];
+
+    public function sendingMode(): string {
+        if (in_array($this->key, static::$TRANSACTIONAL_KEYS, true)) {
+            return static::MODE_TRANSACTIONAL;
+        }
+
+        if (in_array($this->key, static::$DORMANT_KEYS, true)) {
+            return static::MODE_DORMANT;
+        }
+
+        return static::MODE_SCHEDULED;
+    }
+
+    /**
+     * Is this mail sent by the calendar, and therefore switchable?
+     */
+    public function isScheduled(): bool {
+        return $this->sendingMode() === static::MODE_SCHEDULED;
+    }
+
+    public function isTransactional(): bool {
+        return $this->sendingMode() === static::MODE_TRANSACTIONAL;
+    }
+
+    public function isDormant(): bool {
+        return $this->sendingMode() === static::MODE_DORMANT;
+    }
+
+    /**
+     * The date this mail is scheduled on, or null when it has none.
+     * A mail may be linked to several dates in the pivot; the list has always
+     * shown the first, and every mail in practice has exactly one.
+     */
+    public function scheduleDate(): ?EditableDate {
+        return $this->dates->first();
+    }
+
+    /**
+     * The one gate every scheduled sender passes through.
+     *
+     * Returns the mail when it is due to go out right now, and null otherwise:
+     * the row is missing, its date is not configured, today is not the day, or
+     * an administrator switched it off for this edition.
+     *
+     * Note the null-date case. EditableDate::find() returns null for an absent
+     * key and Carbon 3 raises a TypeError on null, so the old
+     * $date->isCurrentDay() was a fatal waiting for a half-seeded database.
+     * An unconfigured date means "not scheduled", never "send now" -- the same
+     * reading EditableDate::hasPassed() already takes.
+     *
+     * This gate covers the calendar only. Sending a mail by hand from the admin
+     * (PartyController, send:party-invite) stays possible while it is off:
+     * that is a deliberate one-off, not the schedule firing.
+     *
+     * @param array $mailKey One of the $MAIL_* constants on this class.
+     * @param string $dateKey One of the constants on EditableDate.
+     */
+    public static function readyToSendToday(array $mailKey, string $dateKey): ?EditableEmail {
+        $mail = static::find($mailKey);
+
+        if ($mail === null) {
+            Log::warning("Scheduled mail '{$mailKey[0]}' has no row in editable_emails, skipping.");
+
+            return null;
+        }
+
+        if (!$mail->enabled) {
+            Log::info("Scheduled mail '{$mailKey[0]}' is disabled, skipping.");
+
+            return null;
+        }
+
+        $date = EditableDate::find($dateKey);
+
+        if ($date === null || !$date->isCurrentDay()) {
+            return null;
+        }
+
+        return $mail;
     }
 
     public function sentEmails() {

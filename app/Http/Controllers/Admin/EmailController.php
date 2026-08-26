@@ -12,16 +12,53 @@ use Illuminate\Support\Facades\Session;
 class EmailController {
 
     public function emails() {
+        // 'emails' => EditableEmail::all()->sortBy(function (EditableEmail $editableEmail) {
+        //     if($editableEmail->dates()->first() == null)
+        //         return Carbon::maxValue()->timestamp;
+        //     return $editableEmail->dates()->first()->value->timestamp;
+        // }),
+        $emails = EditableEmail::query()->with('dates')->orderBy('sort_order')->get();
+
+        // The list shows one row per mail, and only a mail the calendar sends
+        // gets its date edited in that row. Every other date goes to the block
+        // below, so nothing becomes uneditable: "Début inscriptions" is linked
+        // to the confirmation mail for its heading, but it is really the date
+        // isRegistrationOpen() reads to open the public form.
+        $scheduled = $emails->filter->isScheduled()->flatMap->dates->pluck('key');
+
+        // 'dates' => EditableDate::query()->orderBy('value')->get(),
+        $dates = EditableDate::query()->orderBy('sort_order')->get();
+
         return view('admin.emails')->with([
-            // 'emails' => EditableEmail::all()->sortBy(function (EditableEmail $editableEmail) {
-            //     if($editableEmail->dates()->first() == null)
-            //         return Carbon::maxValue()->timestamp;
-            //     return $editableEmail->dates()->first()->value->timestamp;
-            // }),
-            'emails' => EditableEmail::query()->orderBy('sort_order')->get(),
-            // 'dates' => EditableDate::query()->orderBy('value')->get(),
-            'dates' => EditableDate::query()->orderBy('sort_order')->get(),
+            'emails' => $emails,
+            'otherDates' => $dates->whereNotIn('key', $scheduled)->values(),
         ]);
+    }
+
+    /**
+     * Switch a scheduled mail on or off for this edition.
+     *
+     * Only the calendar honours the flag. A transactional mail is sent by an
+     * action and a dormant one by nothing at all, so in both cases the flag
+     * would be stored and never read -- refuse instead of letting an
+     * administrator believe an envoi has been stopped.
+     */
+    public function toggle(EditableEmail $email) {
+        if (!$email->isScheduled()) {
+            Session::flash('error', $email->isTransactional()
+                ? "« {$email->title} » part au moment de l'inscription, pas par le calendrier : il ne peut pas être désactivé ici."
+                : "« {$email->title} » n'est envoyé par aucun automatisme cette année : il n'y a rien à désactiver.");
+
+            return redirect()->route('admin.emails');
+        }
+
+        $email->update(['enabled' => !$email->enabled]);
+
+        Session::flash('message', $email->enabled
+            ? "« {$email->title} » est réactivé et repartira à la date indiquée."
+            : "« {$email->title} » est désactivé : il ne partira pas, sa date est conservée.");
+
+        return redirect()->route('admin.emails');
     }
 
     public function emailsEdit(EditableEmail $email) {
