@@ -996,6 +996,36 @@ priorité ce qui casse en silence.
 
 ---
 
+### D-57 · Un cache de configuration périmé, et un diagnostic trompeur
+**Premier `deploy:check` réel en staging.** Il signalait `APP_URL` en `http://` et des
+identifiants mail manquants, alors que le `.env` du serveur contenait bien
+`https://mnr-staging.quattro.dev`. Le symptôme décisif était ailleurs dans le tableau :
+`APP_ENV` affichait **`production`** quand le `.env` disait `staging`.
+
+Cause : `php artisan config:cache` compile le `.env` dans `bootstrap/cache/config.php`, et
+l'application **ne relit plus jamais le `.env`**. Forge met la configuration en cache à chaque
+déploiement ; toute modification du `.env` faite ensuite via l'interface Forge laisse
+exactement cet état. Correction sur le serveur : `config:clear && config:cache`.
+
+**Le vrai défaut était dans ma commande.** Elle rapportait fidèlement les conséquences —
+mauvaise URL, identifiants absents — et envoyait chercher au mauvais endroit. Un contrôle
+`Cache de configuration` s'exécute désormais **en premier** : il relit le `.env` du disque,
+le compare aux valeurs effectives sur six clés témoins, et nomme celles qui divergent avec la
+commande à lancer. Vérifié en reproduisant le scénario en local — `.env` modifié après un
+`config:cache` — la ligne apparaît en tête et pointe la vraie cause.
+
+Le `.env` est lu à la main plutôt qu'en rechargeant Dotenv : le recharger muterait
+l'environnement que la commande est précisément en train de juger. Les valeurs interpolées
+(`"${APP_NAME}"`) sont ignorées pour la même raison.
+
+**Pas de test automatisé pour ce contrôle, délibérément.** Il faudrait écrire un
+`bootstrap/cache/config.php` pendant la suite ; un plantage entre l'écriture et le nettoyage
+laisserait le dépôt avec une configuration figée — exactement la panne silencieuse que ce
+contrôle existe pour attraper. La branche « cache absent » est couverte par les tests
+existants ; la branche « périmé » a été vérifiée à la main, ci-dessus.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés

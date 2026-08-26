@@ -47,6 +47,7 @@ class DeployCheck extends Command {
      * @return int
      */
     public function handle() {
+        $this->checkConfigurationCache();
         $this->checkEnvironment();
         $this->checkApplicationKey();
         $this->checkPublicUrl();
@@ -77,6 +78,90 @@ class DeployCheck extends Command {
 
     private function add(string $label, string $state, string $detail): void {
         $this->rows[] = [$label, $state, $detail];
+    }
+
+    /**
+     * A stale config cache makes every other check here answer the wrong
+     * question.
+     *
+     * `php artisan config:cache` compiles .env into bootstrap/cache/config.php
+     * and the application then never reads .env again. Edit .env afterwards --
+     * to fix a URL, to paste mail credentials -- and nothing changes, with no
+     * warning anywhere. Forge caches config on every deploy, so any .env edit
+     * made through the Forge UI between deploys leaves exactly this state.
+     *
+     * Without this check the symptom is baffling: deploy:check reports
+     * APP_URL as http:// while .env plainly says https://, and the hunt starts
+     * in the wrong place. Run first, so the diagnosis comes before the
+     * consequences.
+     *
+     * @return void
+     */
+    private function checkConfigurationCache(): void {
+        if (! file_exists($this->laravel->getCachedConfigPath())) {
+            // Not an error: Forge caches config on deploy, but an uncached
+            // application simply reads .env and cannot be stale.
+            $this->add('Cache de configuration', self::OK, 'absent — .env lu directement');
+
+            return;
+        }
+
+        $envPath = base_path('.env');
+
+        if (! is_readable($envPath)) {
+            $this->add('Cache de configuration', self::WARN, '.env illisible, fraîcheur invérifiable');
+
+            return;
+        }
+
+        // Compared by hand rather than by reloading Dotenv: loading it here
+        // would mutate the environment this very command is judging.
+        $raw = [];
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $line = trim($line);
+
+            if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $line, 2);
+            $raw[trim($key)] = trim(trim($value), "\"'");
+        }
+
+        $watched = [
+            'APP_ENV' => 'app.env',
+            'APP_URL' => 'app.url',
+            'MAIL_HOST' => 'mail.host',
+            'MAIL_USERNAME' => 'mail.username',
+            'MAIL_FROM_ADDRESS' => 'mail.from.address',
+            'DB_DATABASE' => 'database.connections.mysql.database',
+        ];
+
+        $stale = [];
+
+        foreach ($watched as $envKey => $configKey) {
+            if (! array_key_exists($envKey, $raw)) {
+                continue;
+            }
+
+            // Skip interpolated values; resolving them means running Dotenv.
+            if (strpos($raw[$envKey], '${') !== false) {
+                continue;
+            }
+
+            if ((string) config($configKey) !== $raw[$envKey]) {
+                $stale[] = $envKey;
+            }
+        }
+
+        $this->add(
+            'Cache de configuration',
+            $stale ? self::FAIL : self::OK,
+            $stale
+                ? 'PÉRIMÉ — .env et cache divergent sur '.implode(', ', $stale)
+                    .'. Lancer: php artisan config:clear && php artisan config:cache'
+                : 'à jour'
+        );
     }
 
     private function checkEnvironment(): void {
