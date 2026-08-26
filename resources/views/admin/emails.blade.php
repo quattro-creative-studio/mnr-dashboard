@@ -27,8 +27,14 @@
             @forelse($emails as $email)
                 <tr>
                     <td>
-                        <div class="font-weight-bold">{{ $email->dates->first()->label }}</div>
-                        <div class="font-italic text-secondary">{{ $email->dates->first()->description }}</div>
+                        {{-- A mail is not required to have a send date: the
+                             follow-up mails kept from the previous rules have
+                             none, and a freshly migrated database seeds only 11
+                             of the 23 date keys. Falling back to the mail's own
+                             title keeps the row readable instead of fatal. --}}
+                        @php($firstDate = $email->dates->first())
+                        <div class="font-weight-bold">{{ optional($firstDate)->label ?? $email->title }}</div>
+                        <div class="font-italic text-secondary">{{ optional($firstDate)->description }}</div>
                     </td>
                     <td>{{ $email->subject }}</td>
                     <td>{{ \Illuminate\Support\Str::words(html_entity_decode(strip_tags($email->text)), 15) }}</td>

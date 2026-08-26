@@ -1120,6 +1120,35 @@ un fichier vide, l'erreur réelle se produisant dans le sous-processus. Remplac�
 
 ---
 
+### D-61 · B-07 · `/admin/emails` en 500 sur une base neuve
+**Signalé depuis staging.** `Attempt to read property "label" on null` : la vue faisait
+`{{ $email->dates->first()->label }}`, et `first()` renvoie `null` pour un mail sans date.
+
+**Reproduit plutôt que déduit.** Base fraîchement migrée : **19 mails, dont 9 sans aucune
+date**, et **11 clés de dates semées sur 23**. Huit des neuf orphelins sont les mails de suivi
+janvier/mars — le mécanisme volontairement désactivé mais conservé (`CLAUDE.md`) — plus
+`newsletter_encouragement`. En local le défaut est invisible : les données importées de
+production ont tous leurs liens.
+
+C'est la même racine que D-44 : un `migrate` neuf ne construit pas un jeu de données complet.
+Ça ne mordra pas à la bascule, qui importe la production — mais ça mord sur **tout nouveau
+serveur**, ce que staging vient de démontrer.
+
+Correction : repli sur `$email->title`, colonne déjà présente et renseignée, plutôt que sur la
+clé technique. La ligne reste lisible au lieu d'être fatale. La ligne voisine utilisait déjà
+`optional()` pour la date d'envoi — l'incohérence était dans la même vue.
+
+**Le vrai enseignement est côté tests.** `RefreshDatabase` migre exactement de la même façon :
+la condition d'échec était présente dans la suite depuis le début, personne n'avait ouvert la
+page. La couverture des routes GET était de **8 sur 67**. `AdminPagesRenderTest` ouvre
+désormais les **10 pages d'administration** sur base neuve, et un test nommé isole la
+régression précise. Vérifié en échec sur le code d'avant.
+
+**Au passage :** PHPUnit 12 ne lit plus l'annotation `@dataProvider`, seul l'attribut
+`#[DataProvider]` est reconnu.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -1135,6 +1164,7 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 | ~~B-04~~ | **Corrigé** — voir D-49. | | |
 | ~~B-05~~ | **Corrigé** — voir D-55. | | |
 | ~~B-06~~ | **Corrigé** — voir D-60. | | |
+| ~~B-07~~ | **Corrigé** — voir D-61. | | |
 
 ---
 
