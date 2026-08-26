@@ -171,7 +171,7 @@
                             </tr>
                             </thead>
                             <tbody>
-                            @forelse($quiz->assignments as $a)
+                            @foreach($quiz->assignments as $a)
                                 <tr>
                                     <td>{{ $a->schoolClass->name }}</td>
                                     <td>{{ $a->schoolClass->teacher->full_name }}</td>
@@ -185,11 +185,7 @@
                                         @endif
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center">Aucune réponse disponible</td>
-                                </tr>
-                            @endforelse
+                                                        @endforeach
                             </tbody>
                         </table>
 

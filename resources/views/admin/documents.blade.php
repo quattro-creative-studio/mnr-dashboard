@@ -95,7 +95,7 @@
             </tr>
             </thead>
             <tbody>
-            @forelse($documents as $document)
+            @foreach($documents as $document)
                 <tr>
                     <td>{{ $document->sort }}</td>
                     <td>{{ $document->title }}</td>
@@ -136,11 +136,7 @@
                         </a>
                     </td>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="6" class="text-center">Aucun document n'est disponible</td>
-                </tr>
-            @endforelse
+                        @endforeach
             </tbody>
         </table>
 

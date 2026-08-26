@@ -25,7 +25,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @forelse($schools as $school)
+                    @foreach($schools as $school)
                         <tr>
                             <td>{{ $school->name }}</td>
                             <td>{{ $school->address }}</td>
@@ -38,11 +38,7 @@
                                 </a>
                             </td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="text-center">Aucun lycée disponible</td>
-                        </tr>
-                    @endforelse
+                                            @endforeach
                     </tbody>
                 </table>
 

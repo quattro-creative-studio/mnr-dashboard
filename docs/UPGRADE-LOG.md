@@ -1085,6 +1085,41 @@ compte créé arrive bien sur `admin.classes`.
 
 ---
 
+### D-60 · B-06 · une alerte DataTables sur la première page de l'admin
+**Signalé depuis staging, juste après la création du premier compte administrateur.** Une
+boîte `alert()` bloquante : *« DataTables warning: Incorrect column count »*, sur
+`/admin/classes` — la page d'atterrissage après connexion.
+
+**Bug préexistant, révélé par une base vide.** Sept vues rendaient leur ligne « aucune donnée »
+sous la forme d'un `<td colspan="N">` unique. DataTables ne sait pas faire correspondre une
+cellule fusionnée à ses colonnes et abandonne. Le défaut ne se manifeste **que lorsque la table
+est vide** — d'où sa survie pendant des années en production, et son apparition immédiate sur
+un staging fraîchement migré.
+
+Les valeurs étaient fausses de toute façon : `admin/classes` codait `colspan="16"` pour une
+table dont la largeur vaut 16 **plus une colonne par quiz**.
+
+Correction : supprimer ces lignes et laisser DataTables rendre son propre état vide, avec les
+libellés français posés dans `resources/js/app.js` — l'interface de cette application est
+intégralement en français, la traduction devait suivre. Les trois vues dont la table n'est
+**pas** un DataTable (`admin/emails`, `external/classes`, `teacher/classes-list`) gardent leur
+`colspan` : il y est valide.
+
+**Vérifié dans le navigateur, pas seulement en compilant :** `/admin/documents`, table vide,
+affiche « Aucune donnée disponible » sans aucune alerte ; `/admin/classes` avec 4 lignes
+rapporte 16 colonnes dont 4 masquées par `columnDefs`, ce qui est cohérent.
+
+`DataTableMarkupTest` découvre les vues initialisant un DataTable plutôt que d'en tenir la
+liste — une nouvelle vue est couverte le jour où elle est écrite — et refuse tout `<td colspan>`
+écrit à la main. Vérifié en échec sur le code d'avant.
+
+**Au passage, une erreur de méthode de ma part :** ma première vérification syntaxique des
+sept vues affichait « OK » pour toutes alors qu'elle ne testait rien — `php -l` s'exécutait sur
+un fichier vide, l'erreur réelle se produisant dans le sous-processus. Remplacée par
+`php artisan view:cache`, qui compile réellement l'ensemble des vues.
+
+---
+
 ---
 
 ## 4. Défauts constatés, volontairement non corrigés
@@ -1099,6 +1134,7 @@ tels quels** : les corriger pendant la montée mélangerait les signaux.
 | ~~B-03~~ | **Corrigé au hop 2** — voir D-12. | | |
 | ~~B-04~~ | **Corrigé** — voir D-49. | | |
 | ~~B-05~~ | **Corrigé** — voir D-55. | | |
+| ~~B-06~~ | **Corrigé** — voir D-60. | | |
 
 ---
 

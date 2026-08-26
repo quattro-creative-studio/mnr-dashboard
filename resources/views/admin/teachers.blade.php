@@ -27,7 +27,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @forelse($teachers as $teacher)
+                    @foreach($teachers as $teacher)
                         <tr>
                             <td>{{ $teacher->salutation->long_form }}</td>
                             <td>{{ $teacher->first_name }}</td>
@@ -42,11 +42,7 @@
                                 </a>
                             </td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="8" class="text-center">Aucun enseignant disponible</td>
-                        </tr>
-                    @endforelse
+                                            @endforeach
                     </tbody>
                 </table>
 

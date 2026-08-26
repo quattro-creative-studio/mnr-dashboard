@@ -63,7 +63,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @forelse($quizzes as $q)
+                    @foreach($quizzes as $q)
                         <tr>
                             <td>{{ $q->name }}</td>
                             <td>{{ $q->max_score }}</td>
@@ -95,11 +95,7 @@
                                 </div>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="9" class="text-center">Aucun quiz disponible</td>
-                        </tr>
-                    @endforelse
+                                        @endforeach
                     </tbody>
                 </table>
 

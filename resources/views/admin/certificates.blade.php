@@ -86,7 +86,7 @@
             </tr>
             </thead>
             <tbody>
-            @forelse($classes as $class)
+            @foreach($classes as $class)
                 <tr>
                     <td>{{ $class->name }}</td>
                     <td>{{ $class->students }}</td>
@@ -112,11 +112,7 @@
                         </div>
                     </td>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="10" class="text-center">Aucune classe n'est enregistr&eacute;e</td>
-                </tr>
-            @endforelse
+                        @endforeach
             </tbody>
         </table>
 

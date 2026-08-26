@@ -184,7 +184,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @forelse($classes as $class)
+                    @foreach($classes as $class)
                         @php
                         $css = "";
                         if($class->teacher->has_multiple_classes)
@@ -233,11 +233,7 @@
                                 </a>
                             </td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="16" class="text-center">Aucune classe n'est enregistr&eacute;e</td>
-                        </tr>
-                    @endforelse
+                                            @endforeach
                     </tbody>
                 </table>
 

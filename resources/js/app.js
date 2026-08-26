@@ -24,6 +24,32 @@ import 'popper.js'
 require('datatables.net');
 require('datatables.net-bs4');
 
+// French defaults for every DataTable in the admin.
+//
+// This exists because the views used to render their own "no rows" line as a
+// single <td colspan="N">. DataTables cannot map a spanning cell onto its
+// columns and aborts with "Incorrect column count" -- an alert() box, on the
+// first page an administrator sees, whenever a table happens to be empty.
+// Letting DataTables render its own empty state removes the whole class of
+// failure; these strings keep it in French.
+$.extend(true, $.fn.dataTable.defaults, {
+    language: {
+        emptyTable: 'Aucune donnée disponible',
+        zeroRecords: 'Aucun résultat',
+        info: 'Affichage de _START_ à _END_ sur _TOTAL_ entrées',
+        infoEmpty: 'Aucune entrée',
+        infoFiltered: '(filtré sur _MAX_ entrées au total)',
+        lengthMenu: 'Afficher _MENU_ entrées',
+        search: 'Rechercher :',
+        paginate: {
+            first: 'Premier',
+            last: 'Dernier',
+            next: 'Suivant',
+            previous: 'Précédent',
+        },
+    },
+});
+
 $('[data-toggle="tooltip"]').tooltip();
 
 let oldInputLabel = [];
