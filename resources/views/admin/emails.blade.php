@@ -71,7 +71,7 @@
                                  the linked date here would be a lie: this mail
                                  leaves the moment a teacher registers. --}}
                             <span class="text-secondary font-italic">&agrave; l'inscription</span>
-                        @elseif($email->isDormant() || $date === null)
+                        @elseif($date === null)
                             <span class="text-secondary">&mdash;</span>
                         @else
                             <input type="hidden" form="dates-form"
@@ -85,11 +85,6 @@
                     <td class="text-nowrap">
                         @if($email->isTransactional())
                             <span class="badge badge-info">Transactionnel</span>
-                        @elseif($email->isDormant())
-                            {{-- The January/March/May follow-up family and the
-                                 numbered newsletters: kept for a future edition,
-                                 wired to no sender today. --}}
-                            <span class="badge badge-warning">Non utilis&eacute;</span>
                         @elseif($email->enabled)
                             <span class="badge badge-success">Actif</span>
                         @else
@@ -102,17 +97,15 @@
                             <i class="fa fa-fw fa-pencil"></i>
                         </a>
 
-                        {{-- A mail the calendar does not send has no schedule
-                             to switch off, so the control is inert rather than
-                             absent: the row keeps the same shape as its
-                             neighbours, and the tooltip says why. --}}
-                        @if(!$email->isScheduled())
+                        {{-- A transactional mail has no schedule to switch
+                             off, so the control is inert rather than absent:
+                             the row keeps the same shape as its neighbours,
+                             and the tooltip says why. --}}
+                        @if($email->isTransactional())
                             <x-action-button :action="route('admin.emails.toggle', [$email])"
                                              variant="secondary"
                                              :disabled="true"
-                                             :title="$email->isTransactional()
-                                                ? 'Envoyé au moment de l\'inscription, pas par le calendrier'
-                                                : 'Aucun automatisme n\'envoie cet e-mail cette année'">
+                                             title="Envoy&eacute; sur action, pas par le calendrier">
                                 <i class="fa fa-fw fa-power-off"></i>
                             </x-action-button>
                         @elseif($email->enabled)
@@ -139,6 +132,51 @@
             </tbody>
         </table>
     </div>
+
+    @if($unusedEmails->isNotEmpty())
+        {{-- Folded away rather than deleted. The January/March follow-up family
+             and the unused newsletters are toggled back on between editions, so
+             their text has to stay reachable -- but showing them in the main
+             list would put nine mails that go nowhere among ten that do. --}}
+        <details class="mb-4">
+            <summary class="text-secondary" style="cursor: pointer;">
+                E-mails non utilis&eacute;s cette ann&eacute;e ({{ $unusedEmails->count() }})
+            </summary>
+
+            <p class="text-secondary mt-2">
+                Aucun automatisme ne les envoie actuellement. Leur contenu est conserv&eacute; et
+                reste modifiable, pour le jour o&ugrave; le m&eacute;canisme de suivi sera r&eacute;activ&eacute;.
+            </p>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                    <tr>
+                        <th>Libell&eacute;</th>
+                        <th>Sujet</th>
+                        <th>Aper&ccedil;u du texte</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($unusedEmails as $email)
+                        <tr class="text-muted">
+                            <td>{{ $email->title }}</td>
+                            <td>{{ $email->subject }}</td>
+                            <td>{{ \Illuminate\Support\Str::words(html_entity_decode(strip_tags($email->text)), 15) }}</td>
+                            <td>
+                                <a href="{{ route('admin.emails.edit', [$email]) }}" class="btn btn-primary"
+                                   title="Modifier le contenu">
+                                    <i class="fa fa-fw fa-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    @endif
 
     @if($otherDates->isNotEmpty())
         <h2 class="h4 mt-4">Dates du concours</h2>

@@ -1407,6 +1407,45 @@ Suite : **212 tests, 504 assertions**. Les nouvelles gardes ont été vérifiée
 sur l'ancien code avant d'être conservées.
 
 
+### D-67 · L'ordre du calendrier n'existait que dans la base de production
+**Constat en comparant les deux bases :** production affiche dix e-mails dans l'ordre du
+concours ; staging en affiche dix-neuf, tous au rang 0, avec les textes de 2018-2019.
+
+**`sort_order` n'a jamais été rempli par une migration.** La colonne est ajoutée en 2023 avec
+un défaut à 0, et c'est tout : les rangs de production ont été saisis **à la main directement
+en base**. L'ordre du calendrier n'existait donc nulle part dans le code, et aucune nouvelle
+installation ne pouvait le retrouver. C'est exactement ce qu'une migration doit porter.
+
+**Ce qu'elle écrit, et ce qu'elle n'écrit pas.** Uniquement `sort_order`. `subject` et `text`
+sont le contenu éditorial du client, modifié depuis `/admin/emails` et réécrit à chaque
+édition : une migration qui les poserait **écraserait le texte de l'année en cours** la
+prochaine fois qu'elle tournerait sur une machine qui l'a déjà. `sort_order` est sûre
+précisément parce qu'aucun écran ne permet de la modifier. Sur production, la migration est un
+no-op — les valeurs y sont déjà.
+
+**Les neuf e-mails en trop : repliés, pas supprimés.** La production les a effacés. Ici ils
+partent dans un bloc dépliable *« E-mails non utilisés cette année »*, toujours modifiables,
+et la migration les range au-delà du rang 100 pour qu'aucun ne s'intercale entre deux e-mails
+qui partent vraiment. Le tableau principal affiche alors **exactement les dix e-mails de
+production, dans le même ordre**. Supprimer aurait été irréversible, pour un mécanisme que le
+projet rallume entre éditions.
+
+**Reclassification.** `follow_up_1_yes/_no` et `follow_up_2_yes/_no` passent de
+« transactionnel » à « dormant » : `EmailRepository` choisit la réponse selon le statut, et
+seule la branche `may_*` du traitement des jetons est vivante. `follow_up_3_no` reste vivant.
+
+**Trace relevée sur staging :** `follow_up_2_yes` contenait le sujet et le texte de l'e-mail
+de confirmation d'inscription (`updated_at` 2026-09-02 13:08, huit minutes avant l'édition de
+`teacher_confirmation`). Collage dans la mauvaise ligne pendant les essais — précisément ce
+que l'ancienne page favorisait, puisque la colonne *Libellé* affichait le libellé de la
+**date** et que les e-mails de suivi étaient mêlés aux autres. Sans conséquence : la base sera
+réimportée depuis la production.
+
+Suite : **214 tests, 516 assertions**. Les deux gardes d'ordre ont été vérifiées défaillantes
+migration neutralisée. Bloc replié vérifié dans Chrome en insérant les neuf lignes en local,
+puis retirées — base locale rendue à son état exact.
+
+
 ## 6. À faire avant la production
 
 **`php artisan deploy:check` répond à la majorité de cette liste** (D-53). Sortie non nulle

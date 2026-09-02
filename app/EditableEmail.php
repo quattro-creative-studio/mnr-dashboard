@@ -118,7 +118,7 @@ class EditableEmail extends Model {
      * triggers them, one recipient at a time.
      *
      *   teacher_confirmation      TeacherRegisterController, on registration
-     *   follow_up_*_yes / _no     EmailRepository, on a follow-up answer
+     *   follow_up_3_no            EmailRepository, on a May follow-up refusal
      *   party_confirmation_no     EmailRepository, on a party refusal
      *   party_group_reminder      PartyController, per class from the admin
      *   final_certificat          sent with the certificate, not on a date
@@ -129,10 +129,6 @@ class EditableEmail extends Model {
      */
     public static $TRANSACTIONAL_KEYS = [
         'teacher_confirmation',
-        'follow_up_1_yes',
-        'follow_up_1_no',
-        'follow_up_2_yes',
-        'follow_up_2_no',
         'follow_up_3_no',
         'party_confirmation_no',
         'party_group_reminder',
@@ -148,6 +144,10 @@ class EditableEmail extends Model {
      * years. The encouragement and numbered newsletters are in the same state:
      * their sendNewsletters() calls are commented out.
      *
+     * Only the January and March answers are listed. EmailRepository keys the
+     * follow-up replies by status and the may_* branch of the token handling is
+     * the one still live, so follow_up_3_no can genuinely still fire.
+     *
      * They are listed rather than hidden: an administrator who edits their text
      * needs to know it will not go anywhere this year. Offering an on/off switch
      * on them would be a lie -- there is no sender to obey it.
@@ -155,8 +155,12 @@ class EditableEmail extends Model {
     public static $DORMANT_KEYS = [
         'follow_up_1',
         'follow_up_1_reminder',
+        'follow_up_1_yes',
+        'follow_up_1_no',
         'follow_up_2',
         'follow_up_2_reminder',
+        'follow_up_2_yes',
+        'follow_up_2_no',
         'follow_up_3',
         'follow_up_3_reminder',
         'newsletter_encouragement',

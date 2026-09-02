@@ -237,8 +237,8 @@ class EditableEmailScheduleTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Transactionnel')
-            ->assertSee('Non utilis', false)
-            ->assertSee('Actif');
+            ->assertSee('Actif')
+            ->assertSee('non utilis', false);
 
         // One row per mail, and no separate e-mail/date pair of tables to
         // reconcile. The Libellé column shows the linked date's label, so the
@@ -246,5 +246,65 @@ class EditableEmailScheduleTest extends TestCase
         foreach (EditableEmail::all() as $mail) {
             $response->assertSee(route('admin.emails.edit', [$mail->key]), false);
         }
+    }
+
+    /**
+     * sort_order was added in 2023 with a default of 0 and never populated by a
+     * migration -- production's ordering was typed into the database by hand.
+     * A fresh install therefore listed the calendar in an arbitrary order, and
+     * staging showed exactly that. The migration is what closes the gap, so the
+     * order is asserted from a freshly migrated database.
+     */
+    public function testTheCalendarIsListedInTheOrderItGoesOut()
+    {
+        $expected = [
+            'teacher_confirmation',
+            'newsletter_start',
+            'new_educational_tool',
+            'invite_party',
+            'final',
+            'invite_party_reminder',
+            'invite_party_informations',
+            'invite_party_reminder_second',
+            'invite_party_j_2',
+            'end_year_communication_email',
+        ];
+
+        $listed = EditableEmail::query()
+            ->orderBy('sort_order')
+            ->get()
+            ->reject->isDormant()
+            ->pluck('key')
+            ->values()
+            ->all();
+
+        $this->assertSame($expected, $listed);
+    }
+
+    /**
+     * Production deleted the retired follow-up mails outright. Keeping them is
+     * the deliberate difference -- the mechanism is toggled back on between
+     * editions -- so they must stay reachable while staying out of the way.
+     */
+    public function testTheRetiredMailsAreFoldedAwayButStillEditable()
+    {
+        $response = $this->actingAs($this->admin())->get(route('admin.emails'));
+
+        $dormant = EditableEmail::all()->filter->isDormant();
+
+        $this->assertGreaterThan(0, $dormant->count());
+
+        foreach ($dormant as $mail) {
+            $response->assertSee(route('admin.emails.edit', [$mail->key]), false);
+        }
+
+        // Out of the running order: nothing dormant sits between two live mails.
+        $ranks = EditableEmail::all()->groupBy(fn ($mail) => $mail->isDormant() ? 'off' : 'on');
+
+        $this->assertGreaterThan(
+            $ranks['on']->max('sort_order'),
+            $ranks['off']->min('sort_order'),
+            'A dormant mail is ranked among the mails that actually go out.'
+        );
     }
 }

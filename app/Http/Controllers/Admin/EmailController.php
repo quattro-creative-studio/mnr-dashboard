@@ -17,7 +17,13 @@ class EmailController {
         //         return Carbon::maxValue()->timestamp;
         //     return $editableEmail->dates()->first()->value->timestamp;
         // }),
-        $emails = EditableEmail::query()->with('dates')->orderBy('sort_order')->get();
+        $all = EditableEmail::query()->with('dates')->orderBy('sort_order')->get();
+
+        // Production simply deleted the retired follow-up mails. Here they are
+        // kept -- they come back when the mechanism does -- but folded away, so
+        // the list an administrator reads is the list that actually goes out.
+        $emails = $all->reject->isDormant()->values();
+        $unusedEmails = $all->filter->isDormant()->values();
 
         // The list shows one row per mail, and only a mail the calendar sends
         // gets its date edited in that row. Every other date goes to the block
@@ -31,6 +37,7 @@ class EmailController {
 
         return view('admin.emails')->with([
             'emails' => $emails,
+            'unusedEmails' => $unusedEmails,
             'otherDates' => $dates->whereNotIn('key', $scheduled)->values(),
         ]);
     }
