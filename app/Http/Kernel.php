@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\AllowFramingByPublicSite;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireTeacher;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
@@ -63,5 +64,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'teacher' => RequireTeacher::class,
         'admin' => RequireAdmin::class,
+        'framable' => AllowFramingByPublicSite::class,
     ];
 }

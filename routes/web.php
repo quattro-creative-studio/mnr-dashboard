@@ -24,7 +24,7 @@ Route::get('/login/recover/reset/{token}', 'Auth\ResetPasswordController@showRes
 Route::post('/login/recover/reset', 'Auth\ResetPasswordController@reset')->name('login.password.reset.post');
 Route::get('/login/redirect', 'Auth\LoginController@loginRedirect')->name('login.redirect');
 
-Route::get('/external/classes', 'ExternalController@classes')->name('external.classes');
+Route::get('/external/classes', 'ExternalController@classes')->name('external.classes')->middleware('framable');
 Route::get('/external/quiz/redirect/{quizCode}', 'QuizController@redirect')->name('external.quiz.redirect');
 Route::get('/external/quiz/{uuid}', 'QuizController@showQuizRedirect')->name('external.quiz.show');
 
