@@ -11,6 +11,7 @@
 
     <form method="post" action="{{ route('teacher.registerPost') }}">
         @csrf
+        <x-honeypot />
 
         <div class="form-group">
             <label for="teacher_salutation">Titre</label>

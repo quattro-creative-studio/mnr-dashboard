@@ -3,6 +3,7 @@
 namespace App\Http;
 
 use App\Http\Middleware\AllowFramingByPublicSite;
+use App\Http\Middleware\Honeypot;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireTeacher;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
@@ -65,5 +66,6 @@ class Kernel extends HttpKernel
         'teacher' => RequireTeacher::class,
         'admin' => RequireAdmin::class,
         'framable' => AllowFramingByPublicSite::class,
+        'honeypot' => Honeypot::class,
     ];
 }

@@ -5,6 +5,7 @@
 
         <form class="text-center mt-4" method="post" action="{{ route('login.password.recover.post') }}">
             @csrf
+            <x-honeypot />
             <h1>Récupération du mot de passe</h1>
 
             @if(Session::has('message'))
