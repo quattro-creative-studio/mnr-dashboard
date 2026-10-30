@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Http\Middleware\AllowFramingByPublicSite;
 use App\Http\Middleware\Honeypot;
+use App\Http\Middleware\PreventSearchIndexing;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireTeacher;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
@@ -23,6 +24,7 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \App\Http\Middleware\TrustProxies::class,
+        PreventSearchIndexing::class,
     ];
 
     /**
