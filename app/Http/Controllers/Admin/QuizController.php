@@ -237,6 +237,45 @@ class QuizController extends Controller {
         return redirect()->route('admin.quiz.show', [$quiz]);
     }
 
+    public function amendment(Quiz $quiz)
+    {
+        abort_if($quiz->state !== Quiz::STATE_RUNNING, 403);
+        $placeholders = EmailController::getPlaceholdersForView();
+        return view('admin.quiz-amendment', compact('quiz', 'placeholders'));
+    }
+
+    /**
+     * Sends a one-off mail with its own subject and text, without touching the
+     * quiz's email_text (which the reminder keeps using).
+     */
+    public function sendAmendment(Request $request, Quiz $quiz)
+    {
+        if(!empty($quiz->validate(Quiz::STATE_RUNNING))) {
+            abort(422);
+        }
+
+        $data = $this->validate($request, [
+            'subject' => 'required|string|max:255',
+            'email_text' => 'required|string',
+            'recipients' => 'required|in:pending,all',
+        ]);
+
+        $query = $quiz->assignments();
+        if($data['recipients'] === 'pending') {
+            $query->whereDoesntHave('response');
+        }
+        $assignments = $query->get();
+
+        foreach ($assignments as $a) {
+            \Mail::to($a->schoolClass->teacher->user->email)
+                ->queue(new QuizMail($a, false, $data['email_text'], $data['subject']));
+        }
+
+        \Session::flash('message', sprintf('Correctif envoyé : %d emails', $assignments->count()));
+
+        return redirect()->route('admin.quiz.show', [$quiz]);
+    }
+
     public function previewMail(Quiz $quiz)
     {
         $class = $quiz->assignments()->first()->schoolClass;

@@ -141,6 +141,12 @@
                                         @endif
                                     </x-action-button>
 
+                                    <a class="btn btn-warning {{ $quiz->state !== \App\Quiz::STATE_RUNNING ? 'disabled' : '' }}"
+                                       href="{{ route('admin.quiz.amendment', [$quiz]) }}">
+                                        <i class="fa fa-fw fa-envelope"></i>
+                                        Envoyer un correctif
+                                    </a>
+
                                 </div>
                             </div>
 
