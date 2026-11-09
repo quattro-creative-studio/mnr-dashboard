@@ -16,6 +16,8 @@ use Illuminate\Support\Collection;
  * @property string state
  * @property int max_score
  * @property Carbon closes_at
+ * @property Carbon|null reminder_at
+ * @property Carbon|null reminder_sent_at
  * @property Carbon sent_at
  * @property Carbon created_at
  * @property Carbon updated_at
@@ -36,12 +38,16 @@ class Quiz extends Model {
         'email_text',
         'max_score',
         'closes_at',
+        'reminder_at',
+        'reminder_sent_at',
         'state',
         'sent_at',
     ];
 
     protected $casts = [
         'closes_at' => 'datetime',
+        'reminder_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
         'sent_at' => 'datetime',
     ];
 
@@ -72,6 +78,11 @@ class Quiz extends Model {
         }
         if (!$this->hasEnoughCodes()) {
             $errors[] = 'Ce quiz n\'a pas assez de codes uniques enregistrés pour que tous les classes puissent avoir un.';
+        }
+        // A reminder time already past when the quiz goes out would fire within
+        // a minute of the original mail.
+        if ($requiredState === self::STATE_NEW && $this->reminder_at !== null && $this->reminder_sent_at === null && $this->reminder_at->isBefore(now())) {
+            $errors[] = 'La date du rappel automatique doit être dans le futur !';
         }
         if ($this->state !== $requiredState) {
             $errors[] = sprintf('Ce quiz doit être dans le statut %s.', __("quiz.state.$requiredState"));
@@ -104,6 +115,27 @@ class Quiz extends Model {
     public function remindableCount()
     {
         return $this->assignments()->whereDoesntHave('response')->count();
+    }
+
+    /**
+     * Queues the reminder mail to every class that has not answered yet.
+     * Shared by the "Envoyer rappel" button and quiz:send-reminders.
+     *
+     * @return int number of mails queued
+     */
+    public function sendReminders(): int
+    {
+        $assignments = $this->assignments()
+            ->whereDoesntHave('response')
+            ->with('schoolClass.teacher.user')
+            ->get();
+
+        foreach ($assignments as $a) {
+            \Mail::to($a->schoolClass->teacher->user->email)
+                ->queue(new \App\Mail\QuizMail($a, true));
+        }
+
+        return $assignments->count();
     }
 
     public function getPointsForClass(SchoolClass $class) {

@@ -85,7 +85,39 @@
                 </div>
             </div>
 
+            <div class="row">
+                <div class="col-6">
 
+                    <div class="form-group">
+                        <label for="reminder_at_date">Rappel automatique (facultatif)</label>
+                        <input type="text" name="reminder_at_date" id="reminder_at_date"
+                               placeholder="yyyy-mm-dd — vide : pas de rappel automatique"
+                               class="form-control reminder-datepicker {{ inputValidationClass($errors, 'reminder_at') }}"
+                               value="{{ old('reminder_at_date', optional($quiz->reminder_at)->format('Y-m-d')) }}">
+                        <div class="invalid-feedback">
+                            {{ inputValidationMessages($errors, 'reminder_at') }}
+                        </div>
+                        <small class="form-text text-muted">
+                            Envoie automatiquement le rappel aux classes qui n'ont pas encore répondu.
+                            @if($quiz->reminder_sent_at)
+                                Rappel automatique déjà envoyé le {{ $quiz->reminder_sent_at->format('Y-m-d H:i') }} ;
+                                choisir une nouvelle date le programme à nouveau.
+                            @endif
+                        </small>
+                    </div>
+
+                </div>
+                <div class="col-6">
+
+                    <div class="form-group">
+                        <label for="reminder_at_time">Heure du rappel</label>
+                        <input type="time" name="reminder_at_time" id="reminder_at_time"
+                               class="form-control {{ inputValidationClass($errors, 'reminder_at') }}"
+                               value="{{ old('reminder_at_time', optional($quiz->reminder_at)->format('H:i') ?? '08:00') }}">
+                    </div>
+
+                </div>
+            </div>
 
             <div class="form-group">
                 <label for="classes">Classes</label>
@@ -207,6 +239,12 @@
             $('#preview').html(text);
             $('#text').html(text);
         }
+        $('.reminder-datepicker').datepicker({
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+            clearBtn: true,
+            startDate: '{{ date('Y-m-d') }}'
+        });
         $('.datepicker').datepicker({
             format: 'yyyy-mm-dd',
             autoclose: true,

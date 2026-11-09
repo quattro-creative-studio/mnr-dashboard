@@ -34,11 +34,13 @@ class QuizController extends Controller {
     public function createPost(Request $request) {
         $request->merge([
             'closes_at' => $request->get('closes_at_date') . ' ' . $request->get('closes_at_time'),
+            'reminder_at' => $this->combineReminderAt($request),
         ]);
         $rules = [
             'name' => 'required|string',
             'max_score' => 'required|int|min:1',
             'closes_at' => 'required|date|after:today',
+            'reminder_at' => 'nullable|date_format:Y-m-d H:i|after:now|before:closes_at',
             'classes' => 'array',
             'classes.*' => 'int|exists:school_classes,id',
             'email_text' => 'string|nullable',
@@ -48,7 +50,7 @@ class QuizController extends Controller {
             $rules["quiz_url.$lang"] = ['required', 'url', new QuizMakerValidUrlRule, new QuizMakerUniqueRule];
         }
 
-        $data = $this->validate($request, $rules);
+        $data = $this->validate($request, $rules, $this->reminderMessages());
 
         // Timezone stated explicitly: Carbon 3 defaults createFromTimestamp() to
         // UTC where Carbon 2 used the application timezone. Without this an admin
@@ -56,6 +58,7 @@ class QuizController extends Controller {
         // which closes quizzes every minute -- would fire an hour or two early
         // with nothing reporting it.
         $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']), config('app.timezone'));
+        $data['reminder_at'] = $this->parseReminderAt($data['reminder_at'] ?? null);
         $data['email_text'] = $data['email_text'] ?? "";
         $quiz = Quiz::create($data);
 
@@ -93,21 +96,31 @@ class QuizController extends Controller {
         abort_if($quiz->state === Quiz::STATE_CLOSED, 403);
         $request->merge([
             'closes_at' => $request->get('closes_at_date') . ' ' . $request->get('closes_at_time'),
+            'reminder_at' => $this->combineReminderAt($request),
         ]);
+        // Only a changed reminder has to lie in the future: re-saving a quiz
+        // whose reminder already went out must not fail on that past date.
+        $reminderChanged = $request->get('reminder_at') !== optional($quiz->reminder_at)->format('Y-m-d H:i');
         $data = $this->validate($request, [
             'name' => 'required|string',
             'max_score' => 'required|int|min:1',
             'closes_at' => 'required|date|date_format:Y-m-d H:i|after:today',
+            'reminder_at' => 'nullable|date_format:Y-m-d H:i|before:closes_at' . ($reminderChanged ? '|after:now' : ''),
             'email_text' => 'string|nullable',
             'classes' => 'array',
             'classes.*' => 'int|exists:school_classes,id',
-        ]);
+        ], $this->reminderMessages());
         // Timezone stated explicitly: Carbon 3 defaults createFromTimestamp() to
         // UTC where Carbon 2 used the application timezone. Without this an admin
         // entering 18:00 gets 17:00 stored (16:00 in summer), and quiz:update --
         // which closes quizzes every minute -- would fire an hour or two early
         // with nothing reporting it.
         $data['closes_at'] = Carbon::createFromTimestamp(strtotime($data['closes_at']), config('app.timezone'));
+        $data['reminder_at'] = $this->parseReminderAt($data['reminder_at'] ?? null);
+        if($reminderChanged) {
+            // A new reminder time arms the reminder again, even if one was sent.
+            $data['reminder_sent_at'] = null;
+        }
         $data['email_text'] = $data['email_text'] ?? "";
         if($quiz->state === Quiz::STATE_CLOSED) {
             unset($data['email_text']);
@@ -226,13 +239,9 @@ class QuizController extends Controller {
             abort(422);
         }
 
-        $assignments = $quiz->assignments()->whereDoesntHave('response')->get();
-        foreach ($assignments as $a) {
-            \Mail::to($a->schoolClass->teacher->user->email)
-                ->queue(new QuizMail($a, true));
-        }
+        $count = $quiz->sendReminders();
 
-        \Session::flash('message', sprintf('Envoyé %d emails', $assignments->count()));
+        \Session::flash('message', sprintf('Envoyé %d emails', $count));
 
         return redirect()->route('admin.quiz.show', [$quiz]);
     }
@@ -283,6 +292,38 @@ class QuizController extends Controller {
         return view('emails.custom', [
             'text' => $text,
         ]);
+    }
+
+    /**
+     * The reminder is optional: no date means no automatic reminder. The time
+     * falls back to 08:00 so picking only a date is enough.
+     */
+    private function combineReminderAt(Request $request): ?string
+    {
+        $date = trim((string) $request->get('reminder_at_date'));
+        if($date === '') {
+            return null;
+        }
+        $time = trim((string) $request->get('reminder_at_time')) ?: '08:00';
+        return "$date $time";
+    }
+
+    private function reminderMessages(): array
+    {
+        return [
+            'reminder_at.date_format' => 'La date du rappel automatique est invalide.',
+            'reminder_at.after' => 'La date du rappel automatique doit être dans le futur.',
+            'reminder_at.before' => 'Le rappel automatique doit être envoyé avant la clôture du quiz.',
+        ];
+    }
+
+        private function parseReminderAt(?string $value): ?Carbon
+    {
+        if($value === null) {
+            return null;
+        }
+        // Same explicit timezone as closes_at, for the same reason.
+        return Carbon::createFromTimestamp(strtotime($value), config('app.timezone'));
     }
 
 }

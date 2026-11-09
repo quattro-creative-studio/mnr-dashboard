@@ -60,6 +60,18 @@
                                         <dt>Max points</dt>
                                         <dd>{{ $quiz->max_score }}</dd>
                                     </div>
+                                    <div class="col-md-6 col-lg-3">
+                                        <dt>Rappel automatique</dt>
+                                        <dd>
+                                            @if($quiz->reminder_sent_at)
+                                                Envoyé le {{ $quiz->reminder_sent_at }}
+                                            @elseif($quiz->reminder_at)
+                                                Prévu le {{ $quiz->reminder_at }}
+                                            @else
+                                                <span class="text-muted">aucun</span>
+                                            @endif
+                                        </dd>
+                                    </div>
                                     @if($quiz->state !== \App\Quiz::STATE_NEW && $quiz->sent_at != null)
                                         <div class="col-md-6 col-lg-3">
                                             <dt>Date d'envoi</dt>

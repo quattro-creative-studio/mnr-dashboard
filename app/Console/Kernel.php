@@ -4,6 +4,7 @@ namespace App\Console;
 
 use App\Console\Commands\SendFollowUpEmails;
 use App\Console\Commands\SendNewsletter;
+use App\Console\Commands\QuizSendRemindersCommand;
 use App\Console\Commands\QuizUpdateCommand;
 use App\Console\Commands\SendFinalMailCommand;
 use App\Console\Commands\SendFinalMailsCommand;
@@ -38,6 +39,7 @@ class Kernel extends ConsoleKernel {
         $schedule->command(SendFinalMailsCommand::class)->dailyAt('10:03')->withoutOverlapping();
         $schedule->command(SendPartyInformationsCommand::class)->dailyAt('10:05')->withoutOverlapping();
         $schedule->command(QuizUpdateCommand::class)->everyMinute();
+        $schedule->command(QuizSendRemindersCommand::class)->everyMinute()->withoutOverlapping();
     }
 
     /**
